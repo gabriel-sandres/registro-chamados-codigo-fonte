@@ -14,12 +14,115 @@ from datetime import datetime
 import pandas as pd
 import os
 import time
+import logging
+import traceback
+from typing import Optional, Tuple
+
+# === CONFIGURAÇÃO DE LOGGING ===
+def setup_logging():
+    # Cria o diretório de logs se não existir
+    log_dir = "logs"
+    if not os.path.exists(log_dir):
+        os.makedirs(log_dir)
+    
+    # Configura o nome do arquivo de log com timestamp
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    log_file = os.path.join(log_dir, f"registro_chamados_{timestamp}.log")
+    
+    # Configura o logging
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(levelname)s - %(message)s',
+        handlers=[
+            logging.FileHandler(log_file, encoding='utf-8'),
+            logging.StreamHandler()
+        ]
+    )
+    return logging.getLogger(__name__)
+
+# Inicializa o logger
+logger = setup_logging()
 
 # === CONFIGURAÇÕES GERAIS ===
 BASE_URL = "https://portal.sisbr.coop.br/visao360/consult"
-EXCEL_PATH = r"C:\Users\gabriel.sandres\OneDrive - Sicoob\Área de Trabalho\cod_fonte_registro\registro-chamados-codigo-fonte\planilha_registro.xlsx"
+EXCEL_PATH = r"C:\Users\gabriel.sandres\OneDrive - Sicoob\Área de Trabalho\cod_fonte_registro\registro-chamados-codigo-fonte\planilha_registro.xlsm"
 CHROMEDRIVER_PATH = "chromedriver.exe"
 dotenv_path = "login.env"
+
+# Dicionário de mapeamento para o campo 'Serviço' com variações comuns
+SERVICOS_VALIDOS = {
+    # Dúvida Negocial
+    "dúvida negocial": "Dúvida Negocial",
+    "duvida negocial": "Dúvida Negocial",
+    "duvida negociacao": "Dúvida Negocial",
+    "dúvida negociacao": "Dúvida Negocial",
+    "duvida de negocio": "Dúvida Negocial",
+    "duvida negocio": "Dúvida Negocial",
+    # Dúvida Técnica
+    "dúvida técnica": "Dúvida Técnica",
+    "duvida tecnica": "Dúvida Técnica",
+    "duvida tecnica": "Dúvida Técnica",
+    "duvida de tecnica": "Dúvida Técnica",
+    # Ambiente de testes
+    "ambiente de testes": "Ambiente de testes",
+    "ambiente testes": "Ambiente de testes",
+    "ambiente de teste": "Ambiente de testes",
+    "ambiente teste": "Ambiente de testes",
+    # Erro De Documentação
+    "erro de documentação": "Erro De Documentação",
+    "erro de documentacao": "Erro De Documentação",
+    "erro documentacao": "Erro De Documentação",
+    "erro documentação": "Erro De Documentação",
+    # Integração Imcompleta
+    "integração imcompleta": "Integração Imcompleta",
+    "integracao imcompleta": "Integração Imcompleta",
+    "integracao incompleta": "Integração Imcompleta",
+    "integração incompleta": "Integração Imcompleta",
+    # Sugestão De Melhoria
+    "sugestão de melhoria": "Sugestão De Melhoria",
+    "sugestao de melhoria": "Sugestão De Melhoria",
+    "sugestao melhoria": "Sugestão De Melhoria",
+    "sugestão melhoria": "Sugestão De Melhoria",
+}
+
+def normalizar_servico(servico):
+    if not isinstance(servico, str):
+        return servico
+    chave = (servico.strip().lower()
+        .replace("á", "a").replace("à", "a").replace("ã", "a").replace("â", "a")
+        .replace("é", "e").replace("ê", "e")
+        .replace("í", "i")
+        .replace("ó", "o").replace("ô", "o").replace("õ", "o")
+        .replace("ú", "u")
+        .replace("ç", "c"))
+    return SERVICOS_VALIDOS.get(chave, servico)
+
+class RegistroChamadoError(Exception):
+    """Classe base para exceções específicas do sistema de registro de chamados"""
+    pass
+
+class LoginError(RegistroChamadoError):
+    """Erro durante o processo de login"""
+    pass
+
+class FormularioError(RegistroChamadoError):
+    """Erro durante o preenchimento do formulário"""
+    pass
+
+class FinalizacaoError(RegistroChamadoError):
+    """Erro durante a finalização do atendimento"""
+    pass
+
+def log_error(error: Exception, context: str, index: Optional[int] = None) -> None:
+    """Função auxiliar para logar erros de forma padronizada"""
+    error_msg = f"[{'Linha ' + str(index) if index is not None else 'Geral'}] ❌ ERRO em {context}: {str(error)}"
+    logger.error(error_msg)
+    logger.error("Stack trace:", exc_info=True)
+    
+    # Adiciona o erro ao DataFrame se houver um índice
+    if index is not None and 'df' in globals():
+        df.at[index, 'Observação'] = f"Erro em {context}: {str(error)}"
+        df.to_excel(EXCEL_PATH, index=False)
 
 
 def setup_driver(download_dir: str) -> webdriver.Chrome:
@@ -50,11 +153,24 @@ def load_excel_data(file_path: str) -> pd.DataFrame:
 
 
 def login(driver: webdriver.Chrome, username: str, password: str):
-    driver.get(BASE_URL)
-    WebDriverWait(driver, 30).until(EC.visibility_of_element_located((By.ID, 'username'))).send_keys(username)
-    WebDriverWait(driver, 30).until(EC.visibility_of_element_located((By.ID, 'password'))).send_keys(password)
-    WebDriverWait(driver, 30).until(EC.element_to_be_clickable((By.ID, 'kc-login'))).click()
-    WebDriverWait(driver, 300).until(EC.invisibility_of_element_located((By.ID, "qr-code")))
+    try:
+        logger.info("🔄 Iniciando processo de login...")
+        driver.get(BASE_URL)
+        
+        logger.info("Preenchendo credenciais...")
+        WebDriverWait(driver, 30).until(EC.visibility_of_element_located((By.ID, 'username'))).send_keys(username)
+        WebDriverWait(driver, 30).until(EC.visibility_of_element_located((By.ID, 'password'))).send_keys(password)
+        
+        logger.info("Clicando no botão de login...")
+        WebDriverWait(driver, 30).until(EC.element_to_be_clickable((By.ID, 'kc-login'))).click()
+        
+        logger.info("Aguardando QR code desaparecer...")
+        WebDriverWait(driver, 300).until(EC.invisibility_of_element_located((By.ID, "qr-code")))
+        logger.info("✅ Login realizado com sucesso!")
+        
+    except Exception as e:
+        log_error(e, "processo de login")
+        raise LoginError(f"Falha no login: {str(e)}")
 
 
 def limpar_e_preencher(campo, valor):
@@ -345,16 +461,16 @@ def clicar_botao_consulta(driver, index):
 
 def preencher_formulario(driver, actions, row, index):
     try:
-        print(f"\n[Linha {index}] Iniciando preenchimento do formulário...")
+        logger.info(f"\n[Linha {index}] Iniciando preenchimento do formulário...")
         # Pega o documento original e formatado
         doc_original = str(row['Documento do cooperado']).strip()
         doc_formatado = formatar_documento(doc_original)
-        print(f"[Linha {index}] Documento original: {doc_original}")
-        print(f"[Linha {index}] Documento formatado: {doc_formatado}")
+        logger.info(f"[Linha {index}] Documento original: {doc_original}")
+        logger.info(f"[Linha {index}] Documento formatado: {doc_formatado}")
         
         protocolo_plad = str(row['Protocolo PLAD']).strip()
         categoria = str(row['Categoria']).strip()
-        servico = str(row['Serviço']).strip()
+        servico = normalizar_servico(str(row['Serviço']).strip())
         cooperativa = str(row['Cooperativa']).strip()
         
         # Mensagem padrão para descrição
@@ -547,9 +663,7 @@ def preencher_formulario(driver, actions, row, index):
         return numero_protocolo
 
     except Exception as e:
-        import traceback
-        print(f"[Linha {index}] Erro ao preencher formulário:")
-        traceback.print_exc()
+        log_error(e, "preencher formulário", index)
         return None
 
 
@@ -577,68 +691,114 @@ def tentar_preencher_formulario(driver, actions, row, index, max_tentativas=3):
     return None
 
 
-def main():
-    driver = None
-    sucesso = False
+def finalizar_atendimento(driver, index):
     try:
-        print("🟢 Iniciando automação...")
-        download_dir = os.getcwd()
-        driver = setup_driver(download_dir)
-        print("✅ Navegador configurado")
-
-        actions = ActionChains(driver)
-        username, password = load_credentials()
-        print("🔐 Credenciais carregadas")
-
-        df = load_excel_data(EXCEL_PATH)
-        print(f"📄 {len(df)} linhas carregadas da planilha.")
-
-        login(driver, username, password)
-        print("✅ Login realizado com sucesso!")
-
-        # Lista para armazenar os protocolos gerados
-        protocolos_gerados = []
-        erros_encontrados = False
-
-        for index, row in df.iterrows():
-            if pd.isna(row.get("Protocolo Visão")):
-                protocolo = tentar_preencher_formulario(driver, actions, row, index)
-                if protocolo:
-                    # Atualiza o DataFrame com o novo protocolo
-                    df.at[index, 'Protocolo Visão'] = protocolo
-                    protocolos_gerados.append(protocolo)
-                    # Salva a planilha a cada protocolo gerado
-                    df.to_excel(EXCEL_PATH, index=False)
-                    print(f"📝 Protocolo {protocolo} salvo na planilha")
-                else:
-                    erros_encontrados = True
-
-        if protocolos_gerados:
-            print(f"\n✅ {len(protocolos_gerados)} protocolos foram gerados com sucesso:")
-            for protocolo in protocolos_gerados:
-                print(f"  ➤ {protocolo}")
+        logger.info(f"[Linha {index}] 🔄 Iniciando finalização do atendimento...")
         
-        if erros_encontrados:
-            print("\n⚠️ Atenção: Alguns registros não puderam ser processados.")
-            print("📋 Verifique a coluna 'Observação' na planilha para mais detalhes.")
-            sucesso = False
-        elif not protocolos_gerados:
-            print("\n⚠️ Nenhum protocolo foi gerado.")
-            print("📋 Verifique se há registros pendentes na planilha.")
-            sucesso = len(df[pd.isna(df["Protocolo Visão"])]) == 0
-        else:
-            print("\n✅ Todos os registros foram processados com sucesso!")
-            sucesso = True
-
+        # Clica no botão "Finalizar atendimento"
+        logger.info(f"[Linha {index}] Clicando no botão 'Finalizar atendimento'...")
+        finalizar_xpath = '/html/body/div[3]/div[4]/div/sc-view-ticket-data/sc-actionbar/div/div/div[2]/form/div/div[5]/sc-button/button'
+        WebDriverWait(driver, 10).until(
+            EC.element_to_be_clickable((By.XPATH, finalizar_xpath))
+        ).click()
+        
+        # Aguarda e clica no botão de confirmação
+        logger.info(f"[Linha {index}] Confirmando finalização...")
+        confirmar_xpath = '/html/body/div[3]/div[2]/div/sc-end-service-modal/sc-modal/div/div/main/div/div[4]/button'
+        WebDriverWait(driver, 10).until(
+            EC.element_to_be_clickable((By.XPATH, confirmar_xpath))
+        ).click()
+        
+        # Aguarda a tela inicial carregar
+        logger.info(f"[Linha {index}] Aguardando retorno à tela inicial...")
+        time.sleep(3)
+        
+        logger.info(f"[Linha {index}] ✅ Atendimento finalizado com sucesso!")
+        return True
+        
     except Exception as e:
-        print(f"\n❌ Erro geral na execução:")
-        print(str(e))
-        sucesso = False
-    finally:
-        if driver:
+        log_error(e, "finalização do atendimento", index)
+        raise FinalizacaoError(f"Falha ao finalizar atendimento: {str(e)}")
+
+
+def main():
+    try:
+        logger.info("🚀 Iniciando sistema de registro de chamados...")
+        
+        # Carrega as credenciais
+        logger.info("Carregando credenciais...")
+        username, password = load_credentials()
+        
+        # Configura o diretório de download
+        download_dir = os.path.dirname(os.path.abspath(__file__))
+        
+        # Inicializa o driver
+        logger.info("Inicializando navegador...")
+        driver = setup_driver(download_dir)
+        actions = ActionChains(driver)
+        
+        try:
+            # Faz login
+            login(driver, username, password)
+            
+            # Carrega os dados do Excel
+            logger.info("Carregando dados da planilha...")
+            df = load_excel_data(EXCEL_PATH)
+            total_registros = len(df)
+            logger.info(f"📊 Total de registros a processar: {total_registros}")
+            
+            # Processa cada linha do Excel
+            registros_processados = 0
+            registros_com_erro = 0
+            
+            for index, row in df.iterrows():
+                try:
+                    logger.info(f"\n{'='*50}")
+                    logger.info(f"[Linha {index}] 📝 Iniciando processamento do registro {index + 1}/{total_registros}")
+                    
+                    # Tenta preencher o formulário
+                    if tentar_preencher_formulario(driver, actions, row, index):
+                        # Se o preenchimento foi bem sucedido, finaliza o atendimento
+                        if finalizar_atendimento(driver, index):
+                            registros_processados += 1
+                            logger.info(f"[Linha {index}] ✅ Registro processado com sucesso!")
+                        else:
+                            registros_com_erro += 1
+                            logger.error(f"[Linha {index}] ❌ Erro ao finalizar atendimento")
+                    else:
+                        registros_com_erro += 1
+                        logger.error(f"[Linha {index}] ❌ Erro ao preencher formulário")
+                    
+                    # Aguarda um momento antes de processar o próximo registro
+                    time.sleep(2)
+                    
+                except Exception as e:
+                    registros_com_erro += 1
+                    log_error(e, "processamento do registro", index)
+                    continue
+            
+            # Relatório final
+            logger.info("\n" + "="*50)
+            logger.info("📊 RELATÓRIO FINAL:")
+            logger.info(f"Total de registros: {total_registros}")
+            logger.info(f"Registros processados com sucesso: {registros_processados}")
+            logger.info(f"Registros com erro: {registros_com_erro}")
+            logger.info("="*50)
+            
+        finally:
+            logger.info("Fechando navegador...")
             driver.quit()
-        print("\n" + ("🏁 Processo finalizado com sucesso." if sucesso else "❌ Processo finalizado com erros."))
+            
+    except Exception as e:
+        log_error(e, "execução geral do sistema")
+        if 'driver' in locals():
+            driver.quit()
+        raise
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as e:
+        logger.critical("❌ Sistema encerrado com erro crítico!", exc_info=True)
+        raise
