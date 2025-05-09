@@ -656,10 +656,17 @@ def preencher_formulario(driver, actions, row, index):
         elemento_protocolo = WebDriverWait(driver, 10).until(
             EC.presence_of_element_located((By.XPATH, protocolo_xpath))
         )
-        # Extrai o texto e remove espaços em branco
         numero_protocolo = elemento_protocolo.text.strip()
-        print(f"[Linha {index}] Protocolo capturado: {numero_protocolo}")
+        logger.info(f"[Linha {index}] Protocolo capturado: {numero_protocolo}")
 
+        # Salva o protocolo na planilha
+        try:
+            df.at[index, 'Protocolo Visão'] = numero_protocolo
+            df.to_excel(EXCEL_PATH, index=False)
+            logger.info(f"[Linha {index}] Protocolo salvo na planilha com sucesso!")
+        except Exception as e:
+            logger.error(f"[Linha {index}] Erro ao salvar protocolo na planilha: {e}")
+        
         return numero_protocolo
 
     except Exception as e:
@@ -694,7 +701,6 @@ def tentar_preencher_formulario(driver, actions, row, index, max_tentativas=3):
 def finalizar_atendimento(driver, index):
     try:
         logger.info(f"[Linha {index}] 🔄 Iniciando finalização do atendimento...")
-        
         # Clica no botão "Finalizar atendimento"
         logger.info(f"[Linha {index}] Clicando no botão 'Finalizar atendimento'...")
         finalizar_xpath = '/html/body/div[3]/div[4]/div/sc-view-ticket-data/sc-actionbar/div/div/div[2]/form/div/div[5]/sc-button/button'
@@ -702,17 +708,35 @@ def finalizar_atendimento(driver, index):
             EC.element_to_be_clickable((By.XPATH, finalizar_xpath))
         ).click()
         
+        # Aguarda o modal/overlay sumir antes de clicar em "Confirmar"
+        logger.info(f"[Linha {index}] Aguardando modal/overlay sumir antes de confirmar...")
+        try:
+            # Espera o overlay sumir (ajuste o xpath se necessário)
+            WebDriverWait(driver, 10).until(
+                EC.invisibility_of_element_located((By.XPATH, '//div[contains(@class, "ss-modal")]'))
+            )
+        except Exception:
+            logger.warning(f"[Linha {index}] Modal/overlay não sumiu, tentando mesmo assim...")
+        
         # Aguarda e clica no botão de confirmação
         logger.info(f"[Linha {index}] Confirmando finalização...")
         confirmar_xpath = '/html/body/div[3]/div[2]/div/sc-end-service-modal/sc-modal/div/div/main/div/div[4]/button'
-        WebDriverWait(driver, 10).until(
-            EC.element_to_be_clickable((By.XPATH, confirmar_xpath))
-        ).click()
+        try:
+            botao_confirmar = WebDriverWait(driver, 10).until(
+                EC.element_to_be_clickable((By.XPATH, confirmar_xpath))
+            )
+            try:
+                botao_confirmar.click()
+            except Exception as e:
+                logger.warning(f"[Linha {index}] Clique normal falhou, tentando via JavaScript...")
+                driver.execute_script("arguments[0].click();", botao_confirmar)
+        except Exception as e:
+            log_error(e, "clique no botão Confirmar", index)
+            raise FinalizacaoError(f"Falha ao clicar no botão Confirmar: {str(e)}")
         
         # Aguarda a tela inicial carregar
         logger.info(f"[Linha {index}] Aguardando retorno à tela inicial...")
         time.sleep(3)
-        
         logger.info(f"[Linha {index}] ✅ Atendimento finalizado com sucesso!")
         return True
         
