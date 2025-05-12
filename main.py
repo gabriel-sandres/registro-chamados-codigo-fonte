@@ -811,37 +811,7 @@ if __name__ == "__main__":
     except Exception as e:
         logger.critical("❌ Sistema encerrado com erro crítico!", exc_info=True)
         raise
-```
 
-### **Principais Alterações**
-
-1. **Correção no Preenchimento de Campos com Autocomplete**:
-   - A função `preencher_campo_com_js` agora usa `preencher_com_sugestao` para simular a digitação dos primeiros caracteres e selecionar a opção da lista suspensa, disparando os eventos JavaScript necessários.
-   - `preencher_com_sugestao` foi ajustada para limpar o campo antes de preencher e esperar a lista de sugestões aparecer (suporta tanto `<option>` quanto `<li>` para maior flexibilidade).
-
-2. **Revisão do XPath do "Canal de autoatendimento"**:
-   - O XPath foi alterado para um seletor relativo baseado no rótulo do campo (`//sc-form-field[div/label[contains(text(), 'Canal de autoatendimento')]]/div/select`), que é mais robusto contra mudanças na estrutura da página.
-   - Adicionada uma espera explícita para o formulário estar carregado antes de preencher os campos (`WebDriverWait` para `//form`).
-
-3. **Melhoria em `selecionar_opcao_select`**:
-   - Agora tenta selecionar a opção por texto visível (`select_by_visible_text`) antes de tentar por valor (`select_by_value`).
-   - Adicionada uma abordagem alternativa que itera pelas opções do `<select>` e seleciona a correspondente via JavaScript, caso as abordagens padrão falhem.
-
-4. **Tratamento de Campos Pré-preenchidos**:
-   - Todos os campos (incluindo `campo_documento`, `campo_protocolo`, `campo_descricao`) agora são explicitamente limpos (`clear()`) antes de preencher novos valores, evitando conflitos com valores pré-existentes.
-
-5. **Mitigação de `ConnectionResetError`**:
-   - Adicionado um atraso de 1 segundo antes de chamar `driver.quit()` no bloco `finally` da função `main`.
-   - Incluído um bloco `try-except` para capturar e logar erros ao fechar o navegador, evitando que interrompam o relatório final.
-
-### **Notas e Recomendações**
-
-- **Teste do XPath do "Canal de autoatendimento"**:
-  - O novo XPath (`//sc-form-field[div/label[contains(text(), 'Canal de autoatendimento')]]/div/select`) é uma suposição baseada no padrão comum de formulários. Você deve inspecionar o HTML da página para confirmar se o rótulo e a estrutura correspondem. Se o XPath ainda falhar, forneça o HTML relevante do formulário para que eu possa sugerir um seletor mais preciso.
-
-- **Depuração Adicional**:
-  - Se o erro persistir, adicione um log do HTML da página no momento do erro para ajudar a identificar o problema:
-    ```python
     except TimeoutException as e:
         print(f"Timeout ao localizar select: {e}")
         logger.error(f"HTML da página: {driver.page_source[:1000]}...")  # Log parcial do HTML
