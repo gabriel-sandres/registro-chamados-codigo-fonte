@@ -393,6 +393,7 @@ def esperar_spinner_desaparecer(driver, timeout=30):
         WebDriverWait(driver, timeout).until(
             EC.invisibility_of_element_located((By.XPATH, spinner_xpath))
         )
+        time.sleep(1)  # Pequena pausa adicional para garantir que a página está pronta
         return True
     except TimeoutException:
         print(f"Timeout ao esperar spinner desaparecer")
@@ -445,6 +446,54 @@ def clicar_botao_consulta(driver, index):
         return False
     except Exception as e:
         print(f"[Linha {index}] ❌ Erro ao tentar clicar no botão consultar: {str(e)}")
+        return False
+
+def clicar_botao_registro_chamado(driver, index, max_tentativas=3):
+    try:
+        print(f"[Linha {index}] Aguardando botão de registro de chamado...")
+        botao_xpath = '/html/body/div[1]/sc-app/sc-register-ticket-button/div/div/div/button'
+        
+        for tentativa in range(max_tentativas):
+            try:
+                # Espera o spinner desaparecer
+                if not esperar_spinner_desaparecer(driver):
+                    print(f"[Linha {index}] Spinner não desapareceu, tentando novamente...")
+                    continue
+                
+                # Espera o botão estar clicável
+                botao = WebDriverWait(driver, 10).until(
+                    EC.element_to_be_clickable((By.XPATH, botao_xpath))
+                )
+                
+                # Tenta diferentes métodos de clique
+                try:
+                    driver.execute_script("arguments[0].scrollIntoView(true);", botao)
+                    time.sleep(1)
+                    botao.click()
+                except:
+                    try:
+                        driver.execute_script("arguments[0].click();", botao)
+                    except:
+                        actions = ActionChains(driver)
+                        actions.move_to_element(botao).click().perform()
+                
+                # Verifica se o formulário foi aberto
+                WebDriverWait(driver, 10).until(
+                    EC.presence_of_element_located((By.XPATH, "//form"))
+                )
+                print(f"[Linha {index}] ✅ Botão de registro de chamado clicado com sucesso")
+                return True
+                
+            except Exception as e:
+                print(f"[Linha {index}] Tentativa {tentativa + 1} falhou: {str(e)}")
+                if tentativa < max_tentativas - 1:
+                    time.sleep(2)
+                    continue
+                else:
+                    raise
+                    
+    except Exception as e:
+        print(f"[Linha {index}] ❌ Erro ao clicar no botão de registro de chamado: {str(e)}")
         return False
 
 def preencher_formulario(driver, actions, row, index, df: pd.DataFrame):
@@ -527,11 +576,11 @@ def preencher_formulario(driver, actions, row, index, df: pd.DataFrame):
         WebDriverWait(driver, 30).until(EC.element_to_be_clickable((By.XPATH, xpath_categoria))).click()
         print(f"[Linha {index}] Botão de categoria clicado")
 
-        print(f"[Linha {index}] Aguardando botão de registro de chamado...")
-        WebDriverWait(driver, 30).until(
-            EC.element_to_be_clickable((By.XPATH, '/html/body/div[1]/sc-app/sc-register-ticket-button/div/div/div/button'))
-        ).click()
-        print(f"[Linha {index}] Botão de registro de chamado clicado")
+        # Substitui o clique direto pelo novo método
+        if not clicar_botao_registro_chamado(driver, index):
+            df.at[index, 'Observação'] = "Falha ao clicar no botão de registro de chamado"
+            df.to_excel(EXCEL_PATH, index=False)
+            return None
 
         # Aguardar o formulário estar completamente carregado
         WebDriverWait(driver, 10).until(
@@ -811,8 +860,3 @@ if __name__ == "__main__":
     except Exception as e:
         logger.critical("❌ Sistema encerrado com erro crítico!", exc_info=True)
         raise
-
-    except TimeoutException as e:
-        print(f"Timeout ao localizar select: {e}")
-        logger.error(f"HTML da página: {driver.page_source[:1000]}...")  # Log parcial do HTML
-        raise FormularioError(f"Timeout ao localizar select: {str(e)}")
