@@ -1,0 +1,654 @@
+2025-05-08 12:15:11,067 - INFO - 🚀 Iniciando sistema de registro de chamados...
+2025-05-08 12:15:11,067 - INFO - Carregando credenciais...
+2025-05-08 12:15:11,069 - INFO - Inicializando navegador...
+2025-05-08 12:15:12,733 - INFO - 🔄 Iniciando processo de login...
+2025-05-08 12:15:26,734 - INFO - Preenchendo credenciais...
+2025-05-08 12:15:26,839 - INFO - Clicando no botão de login...
+2025-05-08 12:15:29,396 - INFO - Aguardando QR code desaparecer...
+2025-05-08 12:15:33,430 - INFO - ✅ Login realizado com sucesso!
+2025-05-08 12:15:33,430 - INFO - Carregando dados da planilha...
+2025-05-08 12:15:33,679 - INFO - 📊 Total de registros a processar: 6
+2025-05-08 12:15:33,679 - INFO - 
+==================================================
+2025-05-08 12:15:33,679 - INFO - [Linha 0] 📝 Iniciando processamento do registro 1/6
+2025-05-08 12:15:33,680 - INFO - 
+[Linha 0] Iniciando preenchimento do formulário...
+2025-05-08 12:15:33,680 - INFO - [Linha 0] Documento original: 055.348.991-74
+2025-05-08 12:15:33,680 - INFO - [Linha 0] Documento formatado: 055.348.991-74
+2025-05-08 12:16:11,266 - INFO - [Linha 0] 🔄 Iniciando finalização do atendimento...
+2025-05-08 12:16:11,267 - INFO - [Linha 0] Clicando no botão 'Finalizar atendimento'...
+2025-05-08 12:16:11,391 - INFO - [Linha 0] Confirmando finalização...
+2025-05-08 12:16:12,522 - ERROR - [Linha 0] ❌ ERRO em finalização do atendimento: Message: element click intercepted: Element <button _ngcontent-hbi-c122="" type="button" title="Finalizar" class="ss-btn ss-btn-primary">...</button> is not clickable at point (1115, 786). Other element would receive the click: <div _ngcontent-hbi-c31="" id="modal" class="ss-modal" style="display: block;">...</div>
+  (Session info: chrome=135.0.7049.115)
+Stacktrace:
+	GetHandleVerifier [0x00007FF6A43E5335+78597]
+	GetHandleVerifier [0x00007FF6A43E5390+78688]
+	(No symbol) [0x00007FF6A41991AA]
+	(No symbol) [0x00007FF6A41F7089]
+	(No symbol) [0x00007FF6A41F4A42]
+	(No symbol) [0x00007FF6A41F1AE1]
+	(No symbol) [0x00007FF6A41F0A42]
+	(No symbol) [0x00007FF6A41E2204]
+	(No symbol) [0x00007FF6A42170EA]
+	(No symbol) [0x00007FF6A41E1AB6]
+	(No symbol) [0x00007FF6A4217300]
+	(No symbol) [0x00007FF6A423F2BB]
+	(No symbol) [0x00007FF6A4216EC3]
+	(No symbol) [0x00007FF6A41E03F8]
+	(No symbol) [0x00007FF6A41E1163]
+	GetHandleVerifier [0x00007FF6A468EEED+2870973]
+	GetHandleVerifier [0x00007FF6A4689698+2848360]
+	GetHandleVerifier [0x00007FF6A46A6973+2967875]
+	GetHandleVerifier [0x00007FF6A440017A+188746]
+	GetHandleVerifier [0x00007FF6A440845F+222255]
+	GetHandleVerifier [0x00007FF6A43ED2B4+111236]
+	GetHandleVerifier [0x00007FF6A43ED462+111666]
+	GetHandleVerifier [0x00007FF6A43D3589+5465]
+	BaseThreadInitThunk [0x00007FFFA9047374+20]
+	RtlUserThreadStart [0x00007FFFAB05CC91+33]
+
+2025-05-08 12:16:12,523 - ERROR - Stack trace:
+Traceback (most recent call last):
+  File "C:\Users\gabriel.sandres\OneDrive - Sicoob\Área de Trabalho\cod_fonte_registro\registro-chamados-codigo-fonte\main.py", line 710, in finalizar_atendimento
+    ).click()
+      ^^^^^^^
+  File "C:\Users\gabriel.sandres\AppData\Local\Programs\Python\Python312\Lib\site-packages\selenium\webdriver\remote\webelement.py", line 119, in click
+    self._execute(Command.CLICK_ELEMENT)
+  File "C:\Users\gabriel.sandres\AppData\Local\Programs\Python\Python312\Lib\site-packages\selenium\webdriver\remote\webelement.py", line 572, in _execute
+    return self._parent.execute(command, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\gabriel.sandres\AppData\Local\Programs\Python\Python312\Lib\site-packages\selenium\webdriver\remote\webdriver.py", line 429, in execute
+    self.error_handler.check_response(response)
+  File "C:\Users\gabriel.sandres\AppData\Local\Programs\Python\Python312\Lib\site-packages\selenium\webdriver\remote\errorhandler.py", line 232, in check_response
+    raise exception_class(message, screen, stacktrace)
+selenium.common.exceptions.ElementClickInterceptedException: Message: element click intercepted: Element <button _ngcontent-hbi-c122="" type="button" title="Finalizar" class="ss-btn ss-btn-primary">...</button> is not clickable at point (1115, 786). Other element would receive the click: <div _ngcontent-hbi-c31="" id="modal" class="ss-modal" style="display: block;">...</div>
+  (Session info: chrome=135.0.7049.115)
+Stacktrace:
+	GetHandleVerifier [0x00007FF6A43E5335+78597]
+	GetHandleVerifier [0x00007FF6A43E5390+78688]
+	(No symbol) [0x00007FF6A41991AA]
+	(No symbol) [0x00007FF6A41F7089]
+	(No symbol) [0x00007FF6A41F4A42]
+	(No symbol) [0x00007FF6A41F1AE1]
+	(No symbol) [0x00007FF6A41F0A42]
+	(No symbol) [0x00007FF6A41E2204]
+	(No symbol) [0x00007FF6A42170EA]
+	(No symbol) [0x00007FF6A41E1AB6]
+	(No symbol) [0x00007FF6A4217300]
+	(No symbol) [0x00007FF6A423F2BB]
+	(No symbol) [0x00007FF6A4216EC3]
+	(No symbol) [0x00007FF6A41E03F8]
+	(No symbol) [0x00007FF6A41E1163]
+	GetHandleVerifier [0x00007FF6A468EEED+2870973]
+	GetHandleVerifier [0x00007FF6A4689698+2848360]
+	GetHandleVerifier [0x00007FF6A46A6973+2967875]
+	GetHandleVerifier [0x00007FF6A440017A+188746]
+	GetHandleVerifier [0x00007FF6A440845F+222255]
+	GetHandleVerifier [0x00007FF6A43ED2B4+111236]
+	GetHandleVerifier [0x00007FF6A43ED462+111666]
+	GetHandleVerifier [0x00007FF6A43D3589+5465]
+	BaseThreadInitThunk [0x00007FFFA9047374+20]
+	RtlUserThreadStart [0x00007FFFAB05CC91+33]
+
+2025-05-08 12:16:12,527 - ERROR - [Linha 0] ❌ ERRO em processamento do registro: Falha ao finalizar atendimento: Message: element click intercepted: Element <button _ngcontent-hbi-c122="" type="button" title="Finalizar" class="ss-btn ss-btn-primary">...</button> is not clickable at point (1115, 786). Other element would receive the click: <div _ngcontent-hbi-c31="" id="modal" class="ss-modal" style="display: block;">...</div>
+  (Session info: chrome=135.0.7049.115)
+Stacktrace:
+	GetHandleVerifier [0x00007FF6A43E5335+78597]
+	GetHandleVerifier [0x00007FF6A43E5390+78688]
+	(No symbol) [0x00007FF6A41991AA]
+	(No symbol) [0x00007FF6A41F7089]
+	(No symbol) [0x00007FF6A41F4A42]
+	(No symbol) [0x00007FF6A41F1AE1]
+	(No symbol) [0x00007FF6A41F0A42]
+	(No symbol) [0x00007FF6A41E2204]
+	(No symbol) [0x00007FF6A42170EA]
+	(No symbol) [0x00007FF6A41E1AB6]
+	(No symbol) [0x00007FF6A4217300]
+	(No symbol) [0x00007FF6A423F2BB]
+	(No symbol) [0x00007FF6A4216EC3]
+	(No symbol) [0x00007FF6A41E03F8]
+	(No symbol) [0x00007FF6A41E1163]
+	GetHandleVerifier [0x00007FF6A468EEED+2870973]
+	GetHandleVerifier [0x00007FF6A4689698+2848360]
+	GetHandleVerifier [0x00007FF6A46A6973+2967875]
+	GetHandleVerifier [0x00007FF6A440017A+188746]
+	GetHandleVerifier [0x00007FF6A440845F+222255]
+	GetHandleVerifier [0x00007FF6A43ED2B4+111236]
+	GetHandleVerifier [0x00007FF6A43ED462+111666]
+	GetHandleVerifier [0x00007FF6A43D3589+5465]
+	BaseThreadInitThunk [0x00007FFFA9047374+20]
+	RtlUserThreadStart [0x00007FFFAB05CC91+33]
+
+2025-05-08 12:16:12,528 - ERROR - Stack trace:
+Traceback (most recent call last):
+  File "C:\Users\gabriel.sandres\OneDrive - Sicoob\Área de Trabalho\cod_fonte_registro\registro-chamados-codigo-fonte\main.py", line 710, in finalizar_atendimento
+    ).click()
+      ^^^^^^^
+  File "C:\Users\gabriel.sandres\AppData\Local\Programs\Python\Python312\Lib\site-packages\selenium\webdriver\remote\webelement.py", line 119, in click
+    self._execute(Command.CLICK_ELEMENT)
+  File "C:\Users\gabriel.sandres\AppData\Local\Programs\Python\Python312\Lib\site-packages\selenium\webdriver\remote\webelement.py", line 572, in _execute
+    return self._parent.execute(command, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\gabriel.sandres\AppData\Local\Programs\Python\Python312\Lib\site-packages\selenium\webdriver\remote\webdriver.py", line 429, in execute
+    self.error_handler.check_response(response)
+  File "C:\Users\gabriel.sandres\AppData\Local\Programs\Python\Python312\Lib\site-packages\selenium\webdriver\remote\errorhandler.py", line 232, in check_response
+    raise exception_class(message, screen, stacktrace)
+selenium.common.exceptions.ElementClickInterceptedException: Message: element click intercepted: Element <button _ngcontent-hbi-c122="" type="button" title="Finalizar" class="ss-btn ss-btn-primary">...</button> is not clickable at point (1115, 786). Other element would receive the click: <div _ngcontent-hbi-c31="" id="modal" class="ss-modal" style="display: block;">...</div>
+  (Session info: chrome=135.0.7049.115)
+Stacktrace:
+	GetHandleVerifier [0x00007FF6A43E5335+78597]
+	GetHandleVerifier [0x00007FF6A43E5390+78688]
+	(No symbol) [0x00007FF6A41991AA]
+	(No symbol) [0x00007FF6A41F7089]
+	(No symbol) [0x00007FF6A41F4A42]
+	(No symbol) [0x00007FF6A41F1AE1]
+	(No symbol) [0x00007FF6A41F0A42]
+	(No symbol) [0x00007FF6A41E2204]
+	(No symbol) [0x00007FF6A42170EA]
+	(No symbol) [0x00007FF6A41E1AB6]
+	(No symbol) [0x00007FF6A4217300]
+	(No symbol) [0x00007FF6A423F2BB]
+	(No symbol) [0x00007FF6A4216EC3]
+	(No symbol) [0x00007FF6A41E03F8]
+	(No symbol) [0x00007FF6A41E1163]
+	GetHandleVerifier [0x00007FF6A468EEED+2870973]
+	GetHandleVerifier [0x00007FF6A4689698+2848360]
+	GetHandleVerifier [0x00007FF6A46A6973+2967875]
+	GetHandleVerifier [0x00007FF6A440017A+188746]
+	GetHandleVerifier [0x00007FF6A440845F+222255]
+	GetHandleVerifier [0x00007FF6A43ED2B4+111236]
+	GetHandleVerifier [0x00007FF6A43ED462+111666]
+	GetHandleVerifier [0x00007FF6A43D3589+5465]
+	BaseThreadInitThunk [0x00007FFFA9047374+20]
+	RtlUserThreadStart [0x00007FFFAB05CC91+33]
+
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\gabriel.sandres\OneDrive - Sicoob\Área de Trabalho\cod_fonte_registro\registro-chamados-codigo-fonte\main.py", line 762, in main
+    if finalizar_atendimento(driver, index):
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\gabriel.sandres\OneDrive - Sicoob\Área de Trabalho\cod_fonte_registro\registro-chamados-codigo-fonte\main.py", line 721, in finalizar_atendimento
+    raise FinalizacaoError(f"Falha ao finalizar atendimento: {str(e)}")
+FinalizacaoError: Falha ao finalizar atendimento: Message: element click intercepted: Element <button _ngcontent-hbi-c122="" type="button" title="Finalizar" class="ss-btn ss-btn-primary">...</button> is not clickable at point (1115, 786). Other element would receive the click: <div _ngcontent-hbi-c31="" id="modal" class="ss-modal" style="display: block;">...</div>
+  (Session info: chrome=135.0.7049.115)
+Stacktrace:
+	GetHandleVerifier [0x00007FF6A43E5335+78597]
+	GetHandleVerifier [0x00007FF6A43E5390+78688]
+	(No symbol) [0x00007FF6A41991AA]
+	(No symbol) [0x00007FF6A41F7089]
+	(No symbol) [0x00007FF6A41F4A42]
+	(No symbol) [0x00007FF6A41F1AE1]
+	(No symbol) [0x00007FF6A41F0A42]
+	(No symbol) [0x00007FF6A41E2204]
+	(No symbol) [0x00007FF6A42170EA]
+	(No symbol) [0x00007FF6A41E1AB6]
+	(No symbol) [0x00007FF6A4217300]
+	(No symbol) [0x00007FF6A423F2BB]
+	(No symbol) [0x00007FF6A4216EC3]
+	(No symbol) [0x00007FF6A41E03F8]
+	(No symbol) [0x00007FF6A41E1163]
+	GetHandleVerifier [0x00007FF6A468EEED+2870973]
+	GetHandleVerifier [0x00007FF6A4689698+2848360]
+	GetHandleVerifier [0x00007FF6A46A6973+2967875]
+	GetHandleVerifier [0x00007FF6A440017A+188746]
+	GetHandleVerifier [0x00007FF6A440845F+222255]
+	GetHandleVerifier [0x00007FF6A43ED2B4+111236]
+	GetHandleVerifier [0x00007FF6A43ED462+111666]
+	GetHandleVerifier [0x00007FF6A43D3589+5465]
+	BaseThreadInitThunk [0x00007FFFA9047374+20]
+	RtlUserThreadStart [0x00007FFFAB05CC91+33]
+
+2025-05-08 12:16:12,533 - INFO - 
+==================================================
+2025-05-08 12:16:12,533 - INFO - [Linha 1] 📝 Iniciando processamento do registro 2/6
+2025-05-08 12:16:12,534 - INFO - 
+[Linha 1] Iniciando preenchimento do formulário...
+2025-05-08 12:16:12,534 - INFO - [Linha 1] Documento original: 05534899174
+2025-05-08 12:16:12,534 - INFO - [Linha 1] Documento formatado: 055.348.991-74
+2025-05-08 12:17:13,268 - INFO - [Linha 1] 🔄 Iniciando finalização do atendimento...
+2025-05-08 12:17:13,268 - INFO - [Linha 1] Clicando no botão 'Finalizar atendimento'...
+2025-05-08 12:17:13,387 - INFO - [Linha 1] Confirmando finalização...
+2025-05-08 12:17:14,474 - ERROR - [Linha 1] ❌ ERRO em finalização do atendimento: Message: element click intercepted: Element <button _ngcontent-hbi-c122="" type="button" title="Finalizar" class="ss-btn ss-btn-primary">...</button> is not clickable at point (1115, 786). Other element would receive the click: <div _ngcontent-hbi-c31="" id="modal" class="ss-modal" style="display: block;">...</div>
+  (Session info: chrome=135.0.7049.115)
+Stacktrace:
+	GetHandleVerifier [0x00007FF6A43E5335+78597]
+	GetHandleVerifier [0x00007FF6A43E5390+78688]
+	(No symbol) [0x00007FF6A41991AA]
+	(No symbol) [0x00007FF6A41F7089]
+	(No symbol) [0x00007FF6A41F4A42]
+	(No symbol) [0x00007FF6A41F1AE1]
+	(No symbol) [0x00007FF6A41F0A42]
+	(No symbol) [0x00007FF6A41E2204]
+	(No symbol) [0x00007FF6A42170EA]
+	(No symbol) [0x00007FF6A41E1AB6]
+	(No symbol) [0x00007FF6A4217300]
+	(No symbol) [0x00007FF6A423F2BB]
+	(No symbol) [0x00007FF6A4216EC3]
+	(No symbol) [0x00007FF6A41E03F8]
+	(No symbol) [0x00007FF6A41E1163]
+	GetHandleVerifier [0x00007FF6A468EEED+2870973]
+	GetHandleVerifier [0x00007FF6A4689698+2848360]
+	GetHandleVerifier [0x00007FF6A46A6973+2967875]
+	GetHandleVerifier [0x00007FF6A440017A+188746]
+	GetHandleVerifier [0x00007FF6A440845F+222255]
+	GetHandleVerifier [0x00007FF6A43ED2B4+111236]
+	GetHandleVerifier [0x00007FF6A43ED462+111666]
+	GetHandleVerifier [0x00007FF6A43D3589+5465]
+	BaseThreadInitThunk [0x00007FFFA9047374+20]
+	RtlUserThreadStart [0x00007FFFAB05CC91+33]
+
+2025-05-08 12:17:14,475 - ERROR - Stack trace:
+Traceback (most recent call last):
+  File "C:\Users\gabriel.sandres\OneDrive - Sicoob\Área de Trabalho\cod_fonte_registro\registro-chamados-codigo-fonte\main.py", line 710, in finalizar_atendimento
+    ).click()
+      ^^^^^^^
+  File "C:\Users\gabriel.sandres\AppData\Local\Programs\Python\Python312\Lib\site-packages\selenium\webdriver\remote\webelement.py", line 119, in click
+    self._execute(Command.CLICK_ELEMENT)
+  File "C:\Users\gabriel.sandres\AppData\Local\Programs\Python\Python312\Lib\site-packages\selenium\webdriver\remote\webelement.py", line 572, in _execute
+    return self._parent.execute(command, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\gabriel.sandres\AppData\Local\Programs\Python\Python312\Lib\site-packages\selenium\webdriver\remote\webdriver.py", line 429, in execute
+    self.error_handler.check_response(response)
+  File "C:\Users\gabriel.sandres\AppData\Local\Programs\Python\Python312\Lib\site-packages\selenium\webdriver\remote\errorhandler.py", line 232, in check_response
+    raise exception_class(message, screen, stacktrace)
+selenium.common.exceptions.ElementClickInterceptedException: Message: element click intercepted: Element <button _ngcontent-hbi-c122="" type="button" title="Finalizar" class="ss-btn ss-btn-primary">...</button> is not clickable at point (1115, 786). Other element would receive the click: <div _ngcontent-hbi-c31="" id="modal" class="ss-modal" style="display: block;">...</div>
+  (Session info: chrome=135.0.7049.115)
+Stacktrace:
+	GetHandleVerifier [0x00007FF6A43E5335+78597]
+	GetHandleVerifier [0x00007FF6A43E5390+78688]
+	(No symbol) [0x00007FF6A41991AA]
+	(No symbol) [0x00007FF6A41F7089]
+	(No symbol) [0x00007FF6A41F4A42]
+	(No symbol) [0x00007FF6A41F1AE1]
+	(No symbol) [0x00007FF6A41F0A42]
+	(No symbol) [0x00007FF6A41E2204]
+	(No symbol) [0x00007FF6A42170EA]
+	(No symbol) [0x00007FF6A41E1AB6]
+	(No symbol) [0x00007FF6A4217300]
+	(No symbol) [0x00007FF6A423F2BB]
+	(No symbol) [0x00007FF6A4216EC3]
+	(No symbol) [0x00007FF6A41E03F8]
+	(No symbol) [0x00007FF6A41E1163]
+	GetHandleVerifier [0x00007FF6A468EEED+2870973]
+	GetHandleVerifier [0x00007FF6A4689698+2848360]
+	GetHandleVerifier [0x00007FF6A46A6973+2967875]
+	GetHandleVerifier [0x00007FF6A440017A+188746]
+	GetHandleVerifier [0x00007FF6A440845F+222255]
+	GetHandleVerifier [0x00007FF6A43ED2B4+111236]
+	GetHandleVerifier [0x00007FF6A43ED462+111666]
+	GetHandleVerifier [0x00007FF6A43D3589+5465]
+	BaseThreadInitThunk [0x00007FFFA9047374+20]
+	RtlUserThreadStart [0x00007FFFAB05CC91+33]
+
+2025-05-08 12:17:14,478 - ERROR - [Linha 1] ❌ ERRO em processamento do registro: Falha ao finalizar atendimento: Message: element click intercepted: Element <button _ngcontent-hbi-c122="" type="button" title="Finalizar" class="ss-btn ss-btn-primary">...</button> is not clickable at point (1115, 786). Other element would receive the click: <div _ngcontent-hbi-c31="" id="modal" class="ss-modal" style="display: block;">...</div>
+  (Session info: chrome=135.0.7049.115)
+Stacktrace:
+	GetHandleVerifier [0x00007FF6A43E5335+78597]
+	GetHandleVerifier [0x00007FF6A43E5390+78688]
+	(No symbol) [0x00007FF6A41991AA]
+	(No symbol) [0x00007FF6A41F7089]
+	(No symbol) [0x00007FF6A41F4A42]
+	(No symbol) [0x00007FF6A41F1AE1]
+	(No symbol) [0x00007FF6A41F0A42]
+	(No symbol) [0x00007FF6A41E2204]
+	(No symbol) [0x00007FF6A42170EA]
+	(No symbol) [0x00007FF6A41E1AB6]
+	(No symbol) [0x00007FF6A4217300]
+	(No symbol) [0x00007FF6A423F2BB]
+	(No symbol) [0x00007FF6A4216EC3]
+	(No symbol) [0x00007FF6A41E03F8]
+	(No symbol) [0x00007FF6A41E1163]
+	GetHandleVerifier [0x00007FF6A468EEED+2870973]
+	GetHandleVerifier [0x00007FF6A4689698+2848360]
+	GetHandleVerifier [0x00007FF6A46A6973+2967875]
+	GetHandleVerifier [0x00007FF6A440017A+188746]
+	GetHandleVerifier [0x00007FF6A440845F+222255]
+	GetHandleVerifier [0x00007FF6A43ED2B4+111236]
+	GetHandleVerifier [0x00007FF6A43ED462+111666]
+	GetHandleVerifier [0x00007FF6A43D3589+5465]
+	BaseThreadInitThunk [0x00007FFFA9047374+20]
+	RtlUserThreadStart [0x00007FFFAB05CC91+33]
+
+2025-05-08 12:17:14,480 - ERROR - Stack trace:
+Traceback (most recent call last):
+  File "C:\Users\gabriel.sandres\OneDrive - Sicoob\Área de Trabalho\cod_fonte_registro\registro-chamados-codigo-fonte\main.py", line 710, in finalizar_atendimento
+    ).click()
+      ^^^^^^^
+  File "C:\Users\gabriel.sandres\AppData\Local\Programs\Python\Python312\Lib\site-packages\selenium\webdriver\remote\webelement.py", line 119, in click
+    self._execute(Command.CLICK_ELEMENT)
+  File "C:\Users\gabriel.sandres\AppData\Local\Programs\Python\Python312\Lib\site-packages\selenium\webdriver\remote\webelement.py", line 572, in _execute
+    return self._parent.execute(command, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\gabriel.sandres\AppData\Local\Programs\Python\Python312\Lib\site-packages\selenium\webdriver\remote\webdriver.py", line 429, in execute
+    self.error_handler.check_response(response)
+  File "C:\Users\gabriel.sandres\AppData\Local\Programs\Python\Python312\Lib\site-packages\selenium\webdriver\remote\errorhandler.py", line 232, in check_response
+    raise exception_class(message, screen, stacktrace)
+selenium.common.exceptions.ElementClickInterceptedException: Message: element click intercepted: Element <button _ngcontent-hbi-c122="" type="button" title="Finalizar" class="ss-btn ss-btn-primary">...</button> is not clickable at point (1115, 786). Other element would receive the click: <div _ngcontent-hbi-c31="" id="modal" class="ss-modal" style="display: block;">...</div>
+  (Session info: chrome=135.0.7049.115)
+Stacktrace:
+	GetHandleVerifier [0x00007FF6A43E5335+78597]
+	GetHandleVerifier [0x00007FF6A43E5390+78688]
+	(No symbol) [0x00007FF6A41991AA]
+	(No symbol) [0x00007FF6A41F7089]
+	(No symbol) [0x00007FF6A41F4A42]
+	(No symbol) [0x00007FF6A41F1AE1]
+	(No symbol) [0x00007FF6A41F0A42]
+	(No symbol) [0x00007FF6A41E2204]
+	(No symbol) [0x00007FF6A42170EA]
+	(No symbol) [0x00007FF6A41E1AB6]
+	(No symbol) [0x00007FF6A4217300]
+	(No symbol) [0x00007FF6A423F2BB]
+	(No symbol) [0x00007FF6A4216EC3]
+	(No symbol) [0x00007FF6A41E03F8]
+	(No symbol) [0x00007FF6A41E1163]
+	GetHandleVerifier [0x00007FF6A468EEED+2870973]
+	GetHandleVerifier [0x00007FF6A4689698+2848360]
+	GetHandleVerifier [0x00007FF6A46A6973+2967875]
+	GetHandleVerifier [0x00007FF6A440017A+188746]
+	GetHandleVerifier [0x00007FF6A440845F+222255]
+	GetHandleVerifier [0x00007FF6A43ED2B4+111236]
+	GetHandleVerifier [0x00007FF6A43ED462+111666]
+	GetHandleVerifier [0x00007FF6A43D3589+5465]
+	BaseThreadInitThunk [0x00007FFFA9047374+20]
+	RtlUserThreadStart [0x00007FFFAB05CC91+33]
+
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\gabriel.sandres\OneDrive - Sicoob\Área de Trabalho\cod_fonte_registro\registro-chamados-codigo-fonte\main.py", line 762, in main
+    if finalizar_atendimento(driver, index):
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\gabriel.sandres\OneDrive - Sicoob\Área de Trabalho\cod_fonte_registro\registro-chamados-codigo-fonte\main.py", line 721, in finalizar_atendimento
+    raise FinalizacaoError(f"Falha ao finalizar atendimento: {str(e)}")
+FinalizacaoError: Falha ao finalizar atendimento: Message: element click intercepted: Element <button _ngcontent-hbi-c122="" type="button" title="Finalizar" class="ss-btn ss-btn-primary">...</button> is not clickable at point (1115, 786). Other element would receive the click: <div _ngcontent-hbi-c31="" id="modal" class="ss-modal" style="display: block;">...</div>
+  (Session info: chrome=135.0.7049.115)
+Stacktrace:
+	GetHandleVerifier [0x00007FF6A43E5335+78597]
+	GetHandleVerifier [0x00007FF6A43E5390+78688]
+	(No symbol) [0x00007FF6A41991AA]
+	(No symbol) [0x00007FF6A41F7089]
+	(No symbol) [0x00007FF6A41F4A42]
+	(No symbol) [0x00007FF6A41F1AE1]
+	(No symbol) [0x00007FF6A41F0A42]
+	(No symbol) [0x00007FF6A41E2204]
+	(No symbol) [0x00007FF6A42170EA]
+	(No symbol) [0x00007FF6A41E1AB6]
+	(No symbol) [0x00007FF6A4217300]
+	(No symbol) [0x00007FF6A423F2BB]
+	(No symbol) [0x00007FF6A4216EC3]
+	(No symbol) [0x00007FF6A41E03F8]
+	(No symbol) [0x00007FF6A41E1163]
+	GetHandleVerifier [0x00007FF6A468EEED+2870973]
+	GetHandleVerifier [0x00007FF6A4689698+2848360]
+	GetHandleVerifier [0x00007FF6A46A6973+2967875]
+	GetHandleVerifier [0x00007FF6A440017A+188746]
+	GetHandleVerifier [0x00007FF6A440845F+222255]
+	GetHandleVerifier [0x00007FF6A43ED2B4+111236]
+	GetHandleVerifier [0x00007FF6A43ED462+111666]
+	GetHandleVerifier [0x00007FF6A43D3589+5465]
+	BaseThreadInitThunk [0x00007FFFA9047374+20]
+	RtlUserThreadStart [0x00007FFFAB05CC91+33]
+
+2025-05-08 12:17:14,485 - INFO - 
+==================================================
+2025-05-08 12:17:14,485 - INFO - [Linha 2] 📝 Iniciando processamento do registro 3/6
+2025-05-08 12:17:14,485 - INFO - 
+[Linha 2] Iniciando preenchimento do formulário...
+2025-05-08 12:17:14,486 - INFO - [Linha 2] Documento original: 055.348.991-74
+2025-05-08 12:17:14,486 - INFO - [Linha 2] Documento formatado: 055.348.991-74
+2025-05-08 12:17:58,571 - ERROR - [Linha 2] ❌ ERRO em preencher formulário: Message: 
+Stacktrace:
+	GetHandleVerifier [0x00007FF6A43E5335+78597]
+	GetHandleVerifier [0x00007FF6A43E5390+78688]
+	(No symbol) [0x00007FF6A41991AA]
+	(No symbol) [0x00007FF6A41EF149]
+	(No symbol) [0x00007FF6A41EF3FC]
+	(No symbol) [0x00007FF6A4242467]
+	(No symbol) [0x00007FF6A421712F]
+	(No symbol) [0x00007FF6A423F2BB]
+	(No symbol) [0x00007FF6A4216EC3]
+	(No symbol) [0x00007FF6A41E03F8]
+	(No symbol) [0x00007FF6A41E1163]
+	GetHandleVerifier [0x00007FF6A468EEED+2870973]
+	GetHandleVerifier [0x00007FF6A4689698+2848360]
+	GetHandleVerifier [0x00007FF6A46A6973+2967875]
+	GetHandleVerifier [0x00007FF6A440017A+188746]
+	GetHandleVerifier [0x00007FF6A440845F+222255]
+	GetHandleVerifier [0x00007FF6A43ED2B4+111236]
+	GetHandleVerifier [0x00007FF6A43ED462+111666]
+	GetHandleVerifier [0x00007FF6A43D3589+5465]
+	BaseThreadInitThunk [0x00007FFFA9047374+20]
+	RtlUserThreadStart [0x00007FFFAB05CC91+33]
+
+2025-05-08 12:17:58,572 - ERROR - Stack trace:
+Traceback (most recent call last):
+  File "C:\Users\gabriel.sandres\OneDrive - Sicoob\Área de Trabalho\cod_fonte_registro\registro-chamados-codigo-fonte\main.py", line 604, in preencher_formulario
+    campo_protocolo = WebDriverWait(driver, 10).until(
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\gabriel.sandres\AppData\Local\Programs\Python\Python312\Lib\site-packages\selenium\webdriver\support\wait.py", line 146, in until
+    raise TimeoutException(message, screen, stacktrace)
+selenium.common.exceptions.TimeoutException: Message: 
+Stacktrace:
+	GetHandleVerifier [0x00007FF6A43E5335+78597]
+	GetHandleVerifier [0x00007FF6A43E5390+78688]
+	(No symbol) [0x00007FF6A41991AA]
+	(No symbol) [0x00007FF6A41EF149]
+	(No symbol) [0x00007FF6A41EF3FC]
+	(No symbol) [0x00007FF6A4242467]
+	(No symbol) [0x00007FF6A421712F]
+	(No symbol) [0x00007FF6A423F2BB]
+	(No symbol) [0x00007FF6A4216EC3]
+	(No symbol) [0x00007FF6A41E03F8]
+	(No symbol) [0x00007FF6A41E1163]
+	GetHandleVerifier [0x00007FF6A468EEED+2870973]
+	GetHandleVerifier [0x00007FF6A4689698+2848360]
+	GetHandleVerifier [0x00007FF6A46A6973+2967875]
+	GetHandleVerifier [0x00007FF6A440017A+188746]
+	GetHandleVerifier [0x00007FF6A440845F+222255]
+	GetHandleVerifier [0x00007FF6A43ED2B4+111236]
+	GetHandleVerifier [0x00007FF6A43ED462+111666]
+	GetHandleVerifier [0x00007FF6A43D3589+5465]
+	BaseThreadInitThunk [0x00007FFFA9047374+20]
+	RtlUserThreadStart [0x00007FFFAB05CC91+33]
+
+2025-05-08 12:17:58,575 - ERROR - [Linha 2] ❌ Erro ao preencher formulário
+2025-05-08 12:18:00,576 - INFO - 
+==================================================
+2025-05-08 12:18:00,576 - INFO - [Linha 3] 📝 Iniciando processamento do registro 4/6
+2025-05-08 12:18:00,576 - INFO - 
+[Linha 3] Iniciando preenchimento do formulário...
+2025-05-08 12:18:00,577 - INFO - [Linha 3] Documento original: 05534899174
+2025-05-08 12:18:00,577 - INFO - [Linha 3] Documento formatado: 055.348.991-74
+2025-05-08 12:18:30,589 - ERROR - [Linha 3] ❌ ERRO em preencher formulário: Message: 
+Stacktrace:
+	GetHandleVerifier [0x00007FF6A43E5335+78597]
+	GetHandleVerifier [0x00007FF6A43E5390+78688]
+	(No symbol) [0x00007FF6A41991AA]
+	(No symbol) [0x00007FF6A41EF149]
+	(No symbol) [0x00007FF6A41EF3FC]
+	(No symbol) [0x00007FF6A4242467]
+	(No symbol) [0x00007FF6A421712F]
+	(No symbol) [0x00007FF6A423F2BB]
+	(No symbol) [0x00007FF6A4216EC3]
+	(No symbol) [0x00007FF6A41E03F8]
+	(No symbol) [0x00007FF6A41E1163]
+	GetHandleVerifier [0x00007FF6A468EEED+2870973]
+	GetHandleVerifier [0x00007FF6A4689698+2848360]
+	GetHandleVerifier [0x00007FF6A46A6973+2967875]
+	GetHandleVerifier [0x00007FF6A440017A+188746]
+	GetHandleVerifier [0x00007FF6A440845F+222255]
+	GetHandleVerifier [0x00007FF6A43ED2B4+111236]
+	GetHandleVerifier [0x00007FF6A43ED462+111666]
+	GetHandleVerifier [0x00007FF6A43D3589+5465]
+	BaseThreadInitThunk [0x00007FFFA9047374+20]
+	RtlUserThreadStart [0x00007FFFAB05CC91+33]
+
+2025-05-08 12:18:30,591 - ERROR - Stack trace:
+Traceback (most recent call last):
+  File "C:\Users\gabriel.sandres\OneDrive - Sicoob\Área de Trabalho\cod_fonte_registro\registro-chamados-codigo-fonte\main.py", line 496, in preencher_formulario
+    campo_documento = WebDriverWait(driver, 30).until(
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\gabriel.sandres\AppData\Local\Programs\Python\Python312\Lib\site-packages\selenium\webdriver\support\wait.py", line 146, in until
+    raise TimeoutException(message, screen, stacktrace)
+selenium.common.exceptions.TimeoutException: Message: 
+Stacktrace:
+	GetHandleVerifier [0x00007FF6A43E5335+78597]
+	GetHandleVerifier [0x00007FF6A43E5390+78688]
+	(No symbol) [0x00007FF6A41991AA]
+	(No symbol) [0x00007FF6A41EF149]
+	(No symbol) [0x00007FF6A41EF3FC]
+	(No symbol) [0x00007FF6A4242467]
+	(No symbol) [0x00007FF6A421712F]
+	(No symbol) [0x00007FF6A423F2BB]
+	(No symbol) [0x00007FF6A4216EC3]
+	(No symbol) [0x00007FF6A41E03F8]
+	(No symbol) [0x00007FF6A41E1163]
+	GetHandleVerifier [0x00007FF6A468EEED+2870973]
+	GetHandleVerifier [0x00007FF6A4689698+2848360]
+	GetHandleVerifier [0x00007FF6A46A6973+2967875]
+	GetHandleVerifier [0x00007FF6A440017A+188746]
+	GetHandleVerifier [0x00007FF6A440845F+222255]
+	GetHandleVerifier [0x00007FF6A43ED2B4+111236]
+	GetHandleVerifier [0x00007FF6A43ED462+111666]
+	GetHandleVerifier [0x00007FF6A43D3589+5465]
+	BaseThreadInitThunk [0x00007FFFA9047374+20]
+	RtlUserThreadStart [0x00007FFFAB05CC91+33]
+
+2025-05-08 12:18:30,593 - ERROR - [Linha 3] ❌ Erro ao preencher formulário
+2025-05-08 12:18:32,595 - INFO - 
+==================================================
+2025-05-08 12:18:32,595 - INFO - [Linha 4] 📝 Iniciando processamento do registro 5/6
+2025-05-08 12:18:32,595 - INFO - 
+[Linha 4] Iniciando preenchimento do formulário...
+2025-05-08 12:18:32,596 - INFO - [Linha 4] Documento original: 055.348.991-74
+2025-05-08 12:18:32,596 - INFO - [Linha 4] Documento formatado: 055.348.991-74
+2025-05-08 12:19:02,605 - ERROR - [Linha 4] ❌ ERRO em preencher formulário: Message: 
+Stacktrace:
+	GetHandleVerifier [0x00007FF6A43E5335+78597]
+	GetHandleVerifier [0x00007FF6A43E5390+78688]
+	(No symbol) [0x00007FF6A41991AA]
+	(No symbol) [0x00007FF6A41EF149]
+	(No symbol) [0x00007FF6A41EF3FC]
+	(No symbol) [0x00007FF6A4242467]
+	(No symbol) [0x00007FF6A421712F]
+	(No symbol) [0x00007FF6A423F2BB]
+	(No symbol) [0x00007FF6A4216EC3]
+	(No symbol) [0x00007FF6A41E03F8]
+	(No symbol) [0x00007FF6A41E1163]
+	GetHandleVerifier [0x00007FF6A468EEED+2870973]
+	GetHandleVerifier [0x00007FF6A4689698+2848360]
+	GetHandleVerifier [0x00007FF6A46A6973+2967875]
+	GetHandleVerifier [0x00007FF6A440017A+188746]
+	GetHandleVerifier [0x00007FF6A440845F+222255]
+	GetHandleVerifier [0x00007FF6A43ED2B4+111236]
+	GetHandleVerifier [0x00007FF6A43ED462+111666]
+	GetHandleVerifier [0x00007FF6A43D3589+5465]
+	BaseThreadInitThunk [0x00007FFFA9047374+20]
+	RtlUserThreadStart [0x00007FFFAB05CC91+33]
+
+2025-05-08 12:19:02,606 - ERROR - Stack trace:
+Traceback (most recent call last):
+  File "C:\Users\gabriel.sandres\OneDrive - Sicoob\Área de Trabalho\cod_fonte_registro\registro-chamados-codigo-fonte\main.py", line 496, in preencher_formulario
+    campo_documento = WebDriverWait(driver, 30).until(
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\gabriel.sandres\AppData\Local\Programs\Python\Python312\Lib\site-packages\selenium\webdriver\support\wait.py", line 146, in until
+    raise TimeoutException(message, screen, stacktrace)
+selenium.common.exceptions.TimeoutException: Message: 
+Stacktrace:
+	GetHandleVerifier [0x00007FF6A43E5335+78597]
+	GetHandleVerifier [0x00007FF6A43E5390+78688]
+	(No symbol) [0x00007FF6A41991AA]
+	(No symbol) [0x00007FF6A41EF149]
+	(No symbol) [0x00007FF6A41EF3FC]
+	(No symbol) [0x00007FF6A4242467]
+	(No symbol) [0x00007FF6A421712F]
+	(No symbol) [0x00007FF6A423F2BB]
+	(No symbol) [0x00007FF6A4216EC3]
+	(No symbol) [0x00007FF6A41E03F8]
+	(No symbol) [0x00007FF6A41E1163]
+	GetHandleVerifier [0x00007FF6A468EEED+2870973]
+	GetHandleVerifier [0x00007FF6A4689698+2848360]
+	GetHandleVerifier [0x00007FF6A46A6973+2967875]
+	GetHandleVerifier [0x00007FF6A440017A+188746]
+	GetHandleVerifier [0x00007FF6A440845F+222255]
+	GetHandleVerifier [0x00007FF6A43ED2B4+111236]
+	GetHandleVerifier [0x00007FF6A43ED462+111666]
+	GetHandleVerifier [0x00007FF6A43D3589+5465]
+	BaseThreadInitThunk [0x00007FFFA9047374+20]
+	RtlUserThreadStart [0x00007FFFAB05CC91+33]
+
+2025-05-08 12:19:02,607 - ERROR - [Linha 4] ❌ Erro ao preencher formulário
+2025-05-08 12:19:04,609 - INFO - 
+==================================================
+2025-05-08 12:19:04,609 - INFO - [Linha 5] 📝 Iniciando processamento do registro 6/6
+2025-05-08 12:19:04,609 - INFO - 
+[Linha 5] Iniciando preenchimento do formulário...
+2025-05-08 12:19:04,610 - INFO - [Linha 5] Documento original: 05534899174
+2025-05-08 12:19:04,610 - INFO - [Linha 5] Documento formatado: 055.348.991-74
+2025-05-08 12:19:34,660 - ERROR - [Linha 5] ❌ ERRO em preencher formulário: Message: 
+Stacktrace:
+	GetHandleVerifier [0x00007FF6A43E5335+78597]
+	GetHandleVerifier [0x00007FF6A43E5390+78688]
+	(No symbol) [0x00007FF6A41991AA]
+	(No symbol) [0x00007FF6A41EF149]
+	(No symbol) [0x00007FF6A41EF3FC]
+	(No symbol) [0x00007FF6A4242467]
+	(No symbol) [0x00007FF6A421712F]
+	(No symbol) [0x00007FF6A423F2BB]
+	(No symbol) [0x00007FF6A4216EC3]
+	(No symbol) [0x00007FF6A41E03F8]
+	(No symbol) [0x00007FF6A41E1163]
+	GetHandleVerifier [0x00007FF6A468EEED+2870973]
+	GetHandleVerifier [0x00007FF6A4689698+2848360]
+	GetHandleVerifier [0x00007FF6A46A6973+2967875]
+	GetHandleVerifier [0x00007FF6A440017A+188746]
+	GetHandleVerifier [0x00007FF6A440845F+222255]
+	GetHandleVerifier [0x00007FF6A43ED2B4+111236]
+	GetHandleVerifier [0x00007FF6A43ED462+111666]
+	GetHandleVerifier [0x00007FF6A43D3589+5465]
+	BaseThreadInitThunk [0x00007FFFA9047374+20]
+	RtlUserThreadStart [0x00007FFFAB05CC91+33]
+
+2025-05-08 12:19:34,661 - ERROR - Stack trace:
+Traceback (most recent call last):
+  File "C:\Users\gabriel.sandres\OneDrive - Sicoob\Área de Trabalho\cod_fonte_registro\registro-chamados-codigo-fonte\main.py", line 496, in preencher_formulario
+    campo_documento = WebDriverWait(driver, 30).until(
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\gabriel.sandres\AppData\Local\Programs\Python\Python312\Lib\site-packages\selenium\webdriver\support\wait.py", line 146, in until
+    raise TimeoutException(message, screen, stacktrace)
+selenium.common.exceptions.TimeoutException: Message: 
+Stacktrace:
+	GetHandleVerifier [0x00007FF6A43E5335+78597]
+	GetHandleVerifier [0x00007FF6A43E5390+78688]
+	(No symbol) [0x00007FF6A41991AA]
+	(No symbol) [0x00007FF6A41EF149]
+	(No symbol) [0x00007FF6A41EF3FC]
+	(No symbol) [0x00007FF6A4242467]
+	(No symbol) [0x00007FF6A421712F]
+	(No symbol) [0x00007FF6A423F2BB]
+	(No symbol) [0x00007FF6A4216EC3]
+	(No symbol) [0x00007FF6A41E03F8]
+	(No symbol) [0x00007FF6A41E1163]
+	GetHandleVerifier [0x00007FF6A468EEED+2870973]
+	GetHandleVerifier [0x00007FF6A4689698+2848360]
+	GetHandleVerifier [0x00007FF6A46A6973+2967875]
+	GetHandleVerifier [0x00007FF6A440017A+188746]
+	GetHandleVerifier [0x00007FF6A440845F+222255]
+	GetHandleVerifier [0x00007FF6A43ED2B4+111236]
+	GetHandleVerifier [0x00007FF6A43ED462+111666]
+	GetHandleVerifier [0x00007FF6A43D3589+5465]
+	BaseThreadInitThunk [0x00007FFFA9047374+20]
+	RtlUserThreadStart [0x00007FFFAB05CC91+33]
+
+2025-05-08 12:19:34,663 - ERROR - [Linha 5] ❌ Erro ao preencher formulário
+2025-05-08 12:19:36,664 - INFO - 
+==================================================
+2025-05-08 12:19:36,664 - INFO - 📊 RELATÓRIO FINAL:
+2025-05-08 12:19:36,664 - INFO - Total de registros: 6
+2025-05-08 12:19:36,665 - INFO - Registros processados com sucesso: 0
+2025-05-08 12:19:36,665 - INFO - Registros com erro: 6
+2025-05-08 12:19:36,665 - INFO - ==================================================
+2025-05-08 12:19:36,665 - INFO - Fechando navegador...

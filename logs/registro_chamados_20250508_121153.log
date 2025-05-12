@@ -1,0 +1,82 @@
+2025-05-08 12:11:53,296 - INFO - 🚀 Iniciando sistema de registro de chamados...
+2025-05-08 12:11:53,296 - INFO - Carregando credenciais...
+2025-05-08 12:11:53,298 - INFO - Inicializando navegador...
+2025-05-08 12:11:54,999 - INFO - 🔄 Iniciando processo de login...
+2025-05-08 12:12:00,658 - INFO - Preenchendo credenciais...
+2025-05-08 12:12:21,144 - INFO - Clicando no botão de login...
+2025-05-08 12:12:22,632 - INFO - Aguardando QR code desaparecer...
+2025-05-08 12:12:32,831 - INFO - ✅ Login realizado com sucesso!
+2025-05-08 12:12:32,832 - INFO - Carregando dados da planilha...
+2025-05-08 12:12:33,062 - INFO - 📊 Total de registros a processar: 6
+2025-05-08 12:12:33,063 - INFO - 
+==================================================
+2025-05-08 12:12:33,063 - INFO - [Linha 0] 📝 Iniciando processamento do registro 1/6
+2025-05-08 12:12:33,064 - INFO - 
+[Linha 0] Iniciando preenchimento do formulário...
+2025-05-08 12:12:33,065 - INFO - [Linha 0] Documento original: 055.348.991-74
+2025-05-08 12:12:33,065 - INFO - [Linha 0] Documento formatado: 055.348.991-74
+2025-05-08 12:13:14,879 - ERROR - [Linha 0] ❌ ERRO em preencher formulário: Message: 
+Stacktrace:
+	GetHandleVerifier [0x00007FF6A43E5335+78597]
+	GetHandleVerifier [0x00007FF6A43E5390+78688]
+	(No symbol) [0x00007FF6A41991AA]
+	(No symbol) [0x00007FF6A41EF149]
+	(No symbol) [0x00007FF6A41EF3FC]
+	(No symbol) [0x00007FF6A4242467]
+	(No symbol) [0x00007FF6A421712F]
+	(No symbol) [0x00007FF6A423F2BB]
+	(No symbol) [0x00007FF6A4216EC3]
+	(No symbol) [0x00007FF6A41E03F8]
+	(No symbol) [0x00007FF6A41E1163]
+	GetHandleVerifier [0x00007FF6A468EEED+2870973]
+	GetHandleVerifier [0x00007FF6A4689698+2848360]
+	GetHandleVerifier [0x00007FF6A46A6973+2967875]
+	GetHandleVerifier [0x00007FF6A440017A+188746]
+	GetHandleVerifier [0x00007FF6A440845F+222255]
+	GetHandleVerifier [0x00007FF6A43ED2B4+111236]
+	GetHandleVerifier [0x00007FF6A43ED462+111666]
+	GetHandleVerifier [0x00007FF6A43D3589+5465]
+	BaseThreadInitThunk [0x00007FFFA9047374+20]
+	RtlUserThreadStart [0x00007FFFAB05CC91+33]
+
+2025-05-08 12:13:14,880 - ERROR - Stack trace:
+Traceback (most recent call last):
+  File "C:\Users\gabriel.sandres\OneDrive - Sicoob\Área de Trabalho\cod_fonte_registro\registro-chamados-codigo-fonte\main.py", line 604, in preencher_formulario
+    campo_protocolo = WebDriverWait(driver, 10).until(
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\gabriel.sandres\AppData\Local\Programs\Python\Python312\Lib\site-packages\selenium\webdriver\support\wait.py", line 146, in until
+    raise TimeoutException(message, screen, stacktrace)
+selenium.common.exceptions.TimeoutException: Message: 
+Stacktrace:
+	GetHandleVerifier [0x00007FF6A43E5335+78597]
+	GetHandleVerifier [0x00007FF6A43E5390+78688]
+	(No symbol) [0x00007FF6A41991AA]
+	(No symbol) [0x00007FF6A41EF149]
+	(No symbol) [0x00007FF6A41EF3FC]
+	(No symbol) [0x00007FF6A4242467]
+	(No symbol) [0x00007FF6A421712F]
+	(No symbol) [0x00007FF6A423F2BB]
+	(No symbol) [0x00007FF6A4216EC3]
+	(No symbol) [0x00007FF6A41E03F8]
+	(No symbol) [0x00007FF6A41E1163]
+	GetHandleVerifier [0x00007FF6A468EEED+2870973]
+	GetHandleVerifier [0x00007FF6A4689698+2848360]
+	GetHandleVerifier [0x00007FF6A46A6973+2967875]
+	GetHandleVerifier [0x00007FF6A440017A+188746]
+	GetHandleVerifier [0x00007FF6A440845F+222255]
+	GetHandleVerifier [0x00007FF6A43ED2B4+111236]
+	GetHandleVerifier [0x00007FF6A43ED462+111666]
+	GetHandleVerifier [0x00007FF6A43D3589+5465]
+	BaseThreadInitThunk [0x00007FFFA9047374+20]
+	RtlUserThreadStart [0x00007FFFAB05CC91+33]
+
+2025-05-08 12:13:14,883 - ERROR - [Linha 0] ❌ Erro ao preencher formulário
+2025-05-08 12:13:16,885 - INFO - 
+==================================================
+2025-05-08 12:13:16,885 - INFO - [Linha 1] 📝 Iniciando processamento do registro 2/6
+2025-05-08 12:13:16,886 - INFO - 
+[Linha 1] Iniciando preenchimento do formulário...
+2025-05-08 12:13:16,886 - INFO - [Linha 1] Documento original: 05534899174
+2025-05-08 12:13:16,886 - INFO - [Linha 1] Documento formatado: 055.348.991-74
+2025-05-08 12:13:33,198 - INFO - Fechando navegador...
+2025-05-08 12:13:33,200 - WARNING - Retrying (Retry(total=2, connect=None, read=None, redirect=None, status=None)) after connection broken by 'ConnectionResetError(10054, 'Foi forçado o cancelamento de uma conexão existente pelo host remoto', None, 10054, None)': /session/b84312a6ba1efca8439d6bde433f162a
