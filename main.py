@@ -311,9 +311,27 @@ def selecionar_conta_por_cooperativa(driver, cooperativa, index):
         print(f"[Linha {index}] Selecionando conta para cooperativa {cooperativa}...")
         select_xpath = '/html/body/div[1]/sc-app/sc-template/sc-root/main/aside/sc-sidebar-container/aside/sc-sidebar/div[2]/div[1]/div/form/div/select'
         
+        # Espera o spinner desaparecer antes de tentar selecionar a conta
+        esperar_spinner_desaparecer(driver, index)
+        
+        # Espera o select estar presente e clicável
         select_element = WebDriverWait(driver, 30).until(
             EC.element_to_be_clickable((By.XPATH, select_xpath))
         )
+        
+        # Rola até o elemento para garantir que está visível
+        driver.execute_script("arguments[0].scrollIntoView(true);", select_element)
+        time.sleep(1)  # Pequena pausa para garantir que a rolagem terminou
+        
+        # Tenta clicar no select primeiro
+        try:
+            select_element.click()
+        except:
+            actions = ActionChains(driver)
+            actions.move_to_element(select_element).click().perform()
+        
+        # Espera as opções aparecerem
+        time.sleep(1)
         
         options = select_element.find_elements(By.TAG_NAME, 'option')
         
@@ -322,9 +340,14 @@ def selecionar_conta_por_cooperativa(driver, cooperativa, index):
             texto_opcao = option.text.strip()
             if texto_opcao.startswith(f"Coop: {cooperativa}"):
                 print(f"[Linha {index}] Conta encontrada: {texto_opcao}")
-                # Usar ActionChains para garantir clique
-                actions = ActionChains(driver)
-                actions.move_to_element(option).click().perform()
+                try:
+                    option.click()
+                except:
+                    try:
+                        driver.execute_script("arguments[0].click();", option)
+                    except:
+                        actions = ActionChains(driver)
+                        actions.move_to_element(option).click().perform()
                 conta_encontrada = True
                 break
         
@@ -332,11 +355,15 @@ def selecionar_conta_por_cooperativa(driver, cooperativa, index):
             print(f"[Linha {index}] ⚠️ ATENÇÃO: Nenhuma conta encontrada para cooperativa {cooperativa}")
             return False
             
-        # Verificar se a conta foi realmente selecionada
+        # Verifica se a conta foi realmente selecionada
+        time.sleep(1)  # Pequena pausa para garantir que a seleção foi processada
         selected_option = select_element.find_element(By.XPATH, "./option[@selected]")
         if not selected_option.text.strip().startswith(f"Coop: {cooperativa}"):
             print(f"[Linha {index}] ⚠️ Conta selecionada não corresponde à cooperativa {cooperativa}")
             return False
+            
+        # Espera o spinner desaparecer após a seleção
+        esperar_spinner_desaparecer(driver, index)
         
         return True
 
@@ -470,6 +497,18 @@ def verificar_tela_atual(driver, index):
 def preencher_formulario(driver, actions, row, index, df: pd.DataFrame):
     try:
         logger.info(f"\n[Linha {index}] Iniciando preenchimento do formulário...")
+        
+        # Espera o spinner desaparecer antes de começar
+        esperar_spinner_desaparecer(driver, index)
+        
+        # Verifica se está na tela correta
+        tela_atual = verificar_tela_atual(driver, index)
+        if tela_atual != "consulta":
+            print(f"[Linha {index}] ⚠️ Não está na tela de consulta. Tentando voltar...")
+            driver.get(BASE_URL)
+            time.sleep(2)
+            esperar_spinner_desaparecer(driver, index)
+        
         required_fields = ['Documento do cooperado', 'Protocolo PLAD', 'Categoria', 'Serviço', 'Cooperativa']
         for field in required_fields:
             if pd.isna(row[field]) or not str(row[field]).strip():
@@ -505,10 +544,23 @@ def preencher_formulario(driver, actions, row, index, df: pd.DataFrame):
         print(f"[Linha {index}] Aguardando campo de documento...")
         campo_documento_xpath = '/html/body/div/sc-app/sc-template/sc-root/main/section/sc-content/sc-consult/div/div[2]/div/sc-card-content/div/main/form/div/div[2]/sc-form-field/div/input'
         
-        campo_documento = WebDriverWait(driver, 30).until(
-            EC.presence_of_element_located((By.XPATH, campo_documento_xpath))
-        )
-        print(f"[Linha {index}] Campo de documento encontrado")
+        # Tenta encontrar o campo de documento com retry
+        max_tentativas = 3
+        for tentativa in range(max_tentativas):
+            try:
+                campo_documento = WebDriverWait(driver, 30).until(
+                    EC.presence_of_element_located((By.XPATH, campo_documento_xpath))
+                )
+                print(f"[Linha {index}] Campo de documento encontrado")
+                break
+            except TimeoutException:
+                if tentativa < max_tentativas - 1:
+                    print(f"[Linha {index}] Tentativa {tentativa + 1} de encontrar campo de documento falhou, tentando novamente...")
+                    driver.refresh()
+                    time.sleep(2)
+                    esperar_spinner_desaparecer(driver, index)
+                else:
+                    raise
 
         campo_documento.clear()
         numeros = ''.join(filter(str.isdigit, doc_original))
