@@ -557,7 +557,7 @@ def preencher_formulario(driver, actions, row, index, df: pd.DataFrame, tentativ
                 df.to_excel(EXCEL_PATH, index=False)
                 return None
         elif tela_atual == "consulta":
-    print(f"[Linha {index}] Está na tela de consulta. Preenchendo documento...")
+            print(f"[Linha {index}] Está na tela de consulta. Preenchendo documento...")
 
     campo_documento_xpath = '/html/body/div/sc-app/sc-template/sc-root/main/section/sc-content/sc-consult/div/div[2]/div/sc-card-content/div/main/form/div/div[2]/sc-form-field/div/input'
     try:
