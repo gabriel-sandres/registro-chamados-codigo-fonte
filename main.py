@@ -626,26 +626,41 @@ def preencher_formulario(driver, actions, row, index):
             driver.execute_script("arguments[0].scrollIntoView(true);", campo_descricao)
             time.sleep(1)
             
-            # Limpa o campo e preenche usando JavaScript
-            driver.execute_script("""
-                arguments[0].value = '';
-                arguments[0].value = arguments[1];
-                arguments[0].dispatchEvent(new Event('input', { bubbles: true }));
-                arguments[0].dispatchEvent(new Event('change', { bubbles: true }));
-            """, campo_descricao, descricao)
-            
-            # Verifica se o campo foi preenchido corretamente
-            valor_preenchido = driver.execute_script("return arguments[0].value;", campo_descricao)
-            if not valor_preenchido:
-                # Tenta preencher novamente usando send_keys
-                campo_descricao.clear()
-                campo_descricao.send_keys(descricao)
-            
-            time.sleep(1)
-            print(f"[Linha {index}] Descrição preenchida: {descricao[:50]}..." if len(descricao) > 50 else f"[Linha {index}] Descrição preenchida: {descricao}")
-            
+            # Tenta diferentes abordagens para preencher o campo
+            try:
+                # Primeira tentativa: JavaScript
+                driver.execute_script("""
+                    arguments[0].value = '';
+                    arguments[0].value = arguments[1];
+                    arguments[0].dispatchEvent(new Event('input', { bubbles: true }));
+                    arguments[0].dispatchEvent(new Event('change', { bubbles: true }));
+                """, campo_descricao, descricao)
+                
+                # Verifica se o campo foi preenchido
+                valor_preenchido = driver.execute_script("return arguments[0].value;", campo_descricao)
+                if not valor_preenchido:
+                    # Segunda tentativa: send_keys
+                    campo_descricao.clear()
+                    campo_descricao.send_keys(descricao)
+                    time.sleep(0.5)
+                    
+                    # Verifica novamente
+                    valor_preenchido = campo_descricao.get_attribute('value')
+                    if not valor_preenchido:
+                        # Terceira tentativa: Actions
+                        actions = ActionChains(driver)
+                        actions.move_to_element(campo_descricao).click().perform()
+                        actions.send_keys(descricao).perform()
+                
+                time.sleep(1)
+                print(f"[Linha {index}] Descrição preenchida: {descricao[:50]}..." if len(descricao) > 50 else f"[Linha {index}] Descrição preenchida: {descricao}")
+                
+            except Exception as e:
+                print(f"[Linha {index}] Erro ao preencher descrição: {str(e)}")
+                raise
+                
         except Exception as e:
-            print(f"[Linha {index}] Erro ao preencher descrição: {str(e)}")
+            print(f"[Linha {index}] Erro ao encontrar campo de descrição: {str(e)}")
             raise
 
         # Aguarda o botão Registrar ficar habilitado e clica nele
@@ -721,38 +736,59 @@ def tentar_preencher_formulario(driver, actions, row, index, max_tentativas=3):
 def finalizar_atendimento(driver, index):
     try:
         logger.info(f"[Linha {index}] 🔄 Iniciando finalização do atendimento...")
+        
+        # Aguarda o modal desaparecer antes de tentar clicar
+        logger.info(f"[Linha {index}] Aguardando modal desaparecer...")
+        try:
+            WebDriverWait(driver, 10).until(
+                EC.invisibility_of_element_located((By.ID, "modal"))
+            )
+        except Exception:
+            logger.warning(f"[Linha {index}] Modal não desapareceu, tentando mesmo assim...")
+        
         # Clica no botão "Finalizar atendimento"
         logger.info(f"[Linha {index}] Clicando no botão 'Finalizar atendimento'...")
         finalizar_xpath = '/html/body/div[3]/div[4]/div/sc-view-ticket-data/sc-actionbar/div/div/div[2]/form/div/div[5]/sc-button/button'
-        WebDriverWait(driver, 10).until(
-            EC.element_to_be_clickable((By.XPATH, finalizar_xpath))
-        ).click()
         
-        # Aguarda o modal/overlay sumir antes de clicar em "Confirmar"
-        logger.info(f"[Linha {index}] Aguardando modal/overlay sumir antes de confirmar...")
+        # Tenta diferentes abordagens para clicar no botão
         try:
-            # Espera o overlay sumir (ajuste o xpath se necessário)
-            WebDriverWait(driver, 10).until(
-                EC.invisibility_of_element_located((By.XPATH, '//div[contains(@class, "ss-modal")]'))
+            botao_finalizar = WebDriverWait(driver, 10).until(
+                EC.element_to_be_clickable((By.XPATH, finalizar_xpath))
             )
+            # Tenta clicar normalmente
+            botao_finalizar.click()
         except Exception:
-            logger.warning(f"[Linha {index}] Modal/overlay não sumiu, tentando mesmo assim...")
+            try:
+                # Tenta clicar via JavaScript
+                driver.execute_script("arguments[0].click();", botao_finalizar)
+            except Exception:
+                # Tenta via Actions
+                actions = ActionChains(driver)
+                actions.move_to_element(botao_finalizar).click().perform()
+        
+        # Aguarda o modal de confirmação aparecer
+        logger.info(f"[Linha {index}] Aguardando modal de confirmação...")
+        time.sleep(2)
         
         # Aguarda e clica no botão de confirmação
         logger.info(f"[Linha {index}] Confirmando finalização...")
         confirmar_xpath = '/html/body/div[3]/div[2]/div/sc-end-service-modal/sc-modal/div/div/main/div/div[4]/button'
+        
+        # Tenta diferentes abordagens para clicar no botão de confirmação
         try:
             botao_confirmar = WebDriverWait(driver, 10).until(
                 EC.element_to_be_clickable((By.XPATH, confirmar_xpath))
             )
+            # Tenta clicar normalmente
+            botao_confirmar.click()
+        except Exception:
             try:
-                botao_confirmar.click()
-            except Exception as e:
-                logger.warning(f"[Linha {index}] Clique normal falhou, tentando via JavaScript...")
+                # Tenta clicar via JavaScript
                 driver.execute_script("arguments[0].click();", botao_confirmar)
-        except Exception as e:
-            log_error(e, "clique no botão Confirmar", index)
-            raise FinalizacaoError(f"Falha ao clicar no botão Confirmar: {str(e)}")
+            except Exception:
+                # Tenta via Actions
+                actions = ActionChains(driver)
+                actions.move_to_element(botao_confirmar).click().perform()
         
         # Aguarda a tela inicial carregar
         logger.info(f"[Linha {index}] Aguardando retorno à tela inicial...")
