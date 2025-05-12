@@ -616,17 +616,37 @@ def preencher_formulario(driver, actions, row, index):
         # Descrição
         print(f"[Linha {index}] Preenchendo Descrição...")
         descricao_xpath = '/html/body/div[3]/div[2]/div/sc-register-ticket/sc-actionbar/div/div/div[2]/form/div/div[9]/sc-form-field/div/textarea'
-        campo_descricao = WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.XPATH, descricao_xpath))
-        )
-        driver.execute_script("""
-            arguments[0].value = '';
-            arguments[0].value = arguments[1];
-            arguments[0].dispatchEvent(new Event('input', { bubbles: true }));
-            arguments[0].dispatchEvent(new Event('change', { bubbles: true }));
-        """, campo_descricao, descricao)
-        print(f"[Linha {index}] Descrição preenchida: {descricao[:50]}..." if len(descricao) > 50 else f"[Linha {index}] Descrição preenchida: {descricao}")
-        time.sleep(1)
+        try:
+            # Espera o campo estar presente e visível
+            campo_descricao = WebDriverWait(driver, 20).until(
+                EC.presence_of_element_located((By.XPATH, descricao_xpath))
+            )
+            
+            # Rola até o campo
+            driver.execute_script("arguments[0].scrollIntoView(true);", campo_descricao)
+            time.sleep(1)
+            
+            # Limpa o campo e preenche usando JavaScript
+            driver.execute_script("""
+                arguments[0].value = '';
+                arguments[0].value = arguments[1];
+                arguments[0].dispatchEvent(new Event('input', { bubbles: true }));
+                arguments[0].dispatchEvent(new Event('change', { bubbles: true }));
+            """, campo_descricao, descricao)
+            
+            # Verifica se o campo foi preenchido corretamente
+            valor_preenchido = driver.execute_script("return arguments[0].value;", campo_descricao)
+            if not valor_preenchido:
+                # Tenta preencher novamente usando send_keys
+                campo_descricao.clear()
+                campo_descricao.send_keys(descricao)
+            
+            time.sleep(1)
+            print(f"[Linha {index}] Descrição preenchida: {descricao[:50]}..." if len(descricao) > 50 else f"[Linha {index}] Descrição preenchida: {descricao}")
+            
+        except Exception as e:
+            print(f"[Linha {index}] Erro ao preencher descrição: {str(e)}")
+            raise
 
         # Aguarda o botão Registrar ficar habilitado e clica nele
         print(f"[Linha {index}] Aguardando botão Registrar ficar habilitado...")
