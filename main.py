@@ -374,9 +374,18 @@ def selecionar_conta_por_cooperativa(driver, cooperativa, index):
         # Espera o spinner desaparecer após a seleção
         esperar_spinner_desaparecer(driver, index)
         
-        print(f"[Linha {index}] ✅ Conta selecionada com sucesso")
-        return True
-
+        # Aguarda a tela mudar para a tela de formulário
+        try:
+            print(f"[Linha {index}] Aguardando mudança para tela de formulário...")
+            WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located((By.XPATH, "//form"))
+            )
+            print(f"[Linha {index}] ✅ Tela de formulário carregada")
+            return True
+        except TimeoutException:
+            print(f"[Linha {index}] ⚠️ Timeout ao aguardar tela de formulário")
+            return False
+            
     except TimeoutException as e:
         print(f"[Linha {index}] Timeout ao selecionar conta: {e}")
         return False
@@ -532,11 +541,33 @@ def preencher_formulario(driver, actions, row, index, df: pd.DataFrame):
         
         # Verifica se está na tela correta
         tela_atual = verificar_tela_atual(driver, index)
-        if tela_atual != "consulta":
-            print(f"[Linha {index}] ⚠️ Não está na tela de consulta. Tentando voltar...")
+        if tela_atual == "formulario":
+            print(f"[Linha {index}] Já está na tela de formulário")
+        elif tela_atual == "selecao_conta":
+            print(f"[Linha {index}] ⚠️ Está na tela de seleção de conta. Tentando selecionar conta...")
+            if not selecionar_conta_por_cooperativa(driver, row['Cooperativa'], index):
+                df.at[index, 'Observação'] = "Falha ao selecionar conta"
+                df.to_excel(EXCEL_PATH, index=False)
+                return None
+        else:
+            print(f"[Linha {index}] ⚠️ Não está na tela correta. Tentando voltar...")
             driver.get(BASE_URL)
             time.sleep(2)
             esperar_spinner_desaparecer(driver, index)
+            
+            # Tenta o processo novamente
+            return preencher_formulario(driver, actions, row, index, df)
+        
+        # Verifica se está realmente na tela de formulário
+        try:
+            WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located((By.XPATH, "//form"))
+            )
+        except TimeoutException:
+            print(f"[Linha {index}] ⚠️ Não foi possível confirmar tela de formulário")
+            df.at[index, 'Observação'] = "Falha ao carregar formulário"
+            df.to_excel(EXCEL_PATH, index=False)
+            return None
         
         required_fields = ['Documento do cooperado', 'Protocolo PLAD', 'Categoria', 'Serviço', 'Cooperativa']
         for field in required_fields:
