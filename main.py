@@ -560,15 +560,60 @@ def preencher_formulario(driver, actions, row, index, df: pd.DataFrame, tentativ
             print(f"[Linha {index}] Está na tela de consulta. Preenchendo documento...")
             # Preenche o documento e clica em consultar
             campo_documento_xpath = '/html/body/div/sc-app/sc-template/sc-root/main/section/sc-content/sc-consult/div/div[2]/div/sc-card-content/div/main/form/div/div[2]/sc-form-field/div/input'
-            campo_documento = WebDriverWait(driver, 30).until(
-                EC.presence_of_element_located((By.XPATH, campo_documento_xpath))
-            )
-            campo_documento.clear()
-            numeros = ''.join(filter(str.isdigit, str(row['Documento do cooperado'])))
-            for digito in numeros:
-                campo_documento.send_keys(digito)
-            campo_documento.send_keys(Keys.TAB)
             
+            # Tenta encontrar o campo de documento com retry
+            max_tentativas_campo = 3
+            campo_encontrado = False
+            
+            for tentativa_campo in range(max_tentativas_campo):
+                try:
+                    print(f"[Linha {index}] Tentativa {tentativa_campo + 1} de encontrar campo de documento...")
+                    campo_documento = WebDriverWait(driver, 30).until(
+                        EC.presence_of_element_located((By.XPATH, campo_documento_xpath))
+                    )
+                    
+                    # Garante que o campo está visível e clicável
+                    driver.execute_script("arguments[0].scrollIntoView(true);", campo_documento)
+                    time.sleep(1)
+                    
+                    # Limpa o campo
+                    campo_documento.clear()
+                    campo_documento.click()
+                    
+                    # Pega o documento e formata
+                    doc_original = str(row['Documento do cooperado']).strip()
+                    numeros = ''.join(filter(str.isdigit, doc_original))
+                    print(f"[Linha {index}] Preenchendo documento: {numeros}")
+                    
+                    # Preenche o campo
+                    for digito in numeros:
+                        campo_documento.send_keys(digito)
+                        time.sleep(0.1)  # Pequena pausa entre cada dígito
+                    
+                    # Verifica se o campo foi preenchido corretamente
+                    valor_preenchido = campo_documento.get_attribute('value')
+                    if valor_preenchido and numeros in valor_preenchido:
+                        print(f"[Linha {index}] ✅ Documento preenchido com sucesso: {valor_preenchido}")
+                        campo_encontrado = True
+                        break
+                    else:
+                        print(f"[Linha {index}] ⚠️ Campo não foi preenchido corretamente. Tentando novamente...")
+                        continue
+                        
+                except Exception as e:
+                    print(f"[Linha {index}] Erro ao tentar preencher campo: {str(e)}")
+                    if tentativa_campo < max_tentativas_campo - 1:
+                        print(f"[Linha {index}] Tentando novamente...")
+                        time.sleep(1)
+                    continue
+            
+            if not campo_encontrado:
+                print(f"[Linha {index}] ❌ Não foi possível preencher o campo de documento após {max_tentativas_campo} tentativas")
+                df.at[index, 'Observação'] = "Falha ao preencher campo de documento"
+                df.to_excel(EXCEL_PATH, index=False)
+                return None
+            
+            # Clica no botão consultar
             if not clicar_botao_consulta(driver, index):
                 df.at[index, 'Observação'] = "Falha ao clicar no botão consultar"
                 df.to_excel(EXCEL_PATH, index=False)
