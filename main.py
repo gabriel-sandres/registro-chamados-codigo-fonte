@@ -1,4 +1,3 @@
-```python
 #!/usr/bin/env python
 # coding: utf-8
 
@@ -127,11 +126,32 @@ def load_credentials():
     return username, password
 
 def load_excel_data(file_path: str) -> pd.DataFrame:
-    df = pd.read_excel(
-        file_path,
-        dtype={'Documento do cooperado': str}
-    )
-    return df
+    try:
+        if not os.path.exists(file_path):
+            raise FileNotFoundError(f"Arquivo Excel não encontrado: {file_path}")
+            
+        df = pd.read_excel(
+            file_path,
+            dtype={'Documento do cooperado': str}
+        )
+        
+        # Validação das colunas obrigatórias
+        required_columns = ['Documento do cooperado', 'Protocolo PLAD', 'Categoria', 'Serviço', 'Cooperativa']
+        missing_columns = [col for col in required_columns if col not in df.columns]
+        if missing_columns:
+            raise ValueError(f"Colunas obrigatórias ausentes no Excel: {missing_columns}")
+            
+        # Validação de dados vazios
+        for col in required_columns:
+            empty_rows = df[df[col].isna() | (df[col].astype(str).str.strip() == '')].index
+            if not empty_rows.empty:
+                logger.warning(f"Linhas com {col} vazio: {empty_rows.tolist()}")
+                
+        return df
+        
+    except Exception as e:
+        logger.error(f"Erro ao carregar arquivo Excel: {str(e)}")
+        raise
 
 def login(driver: webdriver.Chrome, username: str, password: str):
     try:
@@ -257,7 +277,7 @@ def selecionar_opcao(driver, campo_xpath, opcao_xpath):
 # Modificado para tentar localizar a opção iterativamente
 def selecionar_opcao_select(driver, select_xpath, valor):
     try:
-        print *)
+        print(f"Selecionando opção '{valor}' no select...")
         select_element = WebDriverWait(driver, 10).until(
             EC.element_to_be_clickable((By.XPATH, select_xpath))
         )
@@ -700,8 +720,16 @@ def main():
     try:
         logger.info("🚀 Iniciando sistema de registro de chamados...")
         
+        # Verifica se o arquivo de credenciais existe
+        if not os.path.exists(dotenv_path):
+            raise FileNotFoundError(f"Arquivo de credenciais não encontrado: {dotenv_path}")
+        
         logger.info("Carregando credenciais...")
         username, password = load_credentials()
+        
+        # Verifica se o chromedriver existe
+        if not os.path.exists(CHROMEDRIVER_PATH):
+            raise FileNotFoundError(f"ChromeDriver não encontrado: {CHROMEDRIVER_PATH}")
         
         download_dir = os.path.dirname(os.path.abspath(__file__))
         
@@ -715,12 +743,14 @@ def main():
             logger.info("Carregando dados da planilha...")
             df = load_excel_data(EXCEL_PATH)
             required_columns = ['Documento do cooperado', 'Protocolo PLAD', 'Categoria', 'Serviço', 'Cooperativa']
-            missing_columns = [col for col in required_columns if col not in df.columns]
-            if missing_columns:
-                raise ValueError(f"Colunas ausentes no Excel: {missing_columns}")
+            
             
             total_registros = len(df)
             logger.info(f"📊 Total de registros a processar: {total_registros}")
+            
+            if total_registros == 0:
+                logger.warning("⚠️ Nenhum registro encontrado na planilha!")
+                return
             
             registros_processados = 0
             registros_com_erro = 0
@@ -729,6 +759,11 @@ def main():
                 try:
                     logger.info(f"\n{'='*50}")
                     logger.info(f"[Linha {index}] 📝 Iniciando processamento do registro {index + 1}/{total_registros}")
+                    
+                    # Validação dos dados da linha
+                    for campo in ['Documento do cooperado', 'Protocolo PLAD', 'Categoria', 'Serviço', 'Cooperativa']:
+                        if pd.isna(row[campo]) or not str(row[campo]).strip():
+                            raise ValueError(f"Campo '{campo}' inválido ou ausente na linha {index}")
                     
                     if tentar_preencher_formulario(driver, actions, row, index, df):
                         if finalizar_atendimento(driver, index, df):
