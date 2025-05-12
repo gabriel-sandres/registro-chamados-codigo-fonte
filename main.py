@@ -1,3 +1,4 @@
+```python
 #!/usr/bin/env python
 # coding: utf-8
 
@@ -21,16 +22,13 @@ from selenium.common.exceptions import TimeoutException, NoSuchElementException,
 
 # === CONFIGURAÇÃO DE LOGGING ===
 def setup_logging():
-    # Cria o diretório de logs se não existir
     log_dir = "logs"
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
     
-    # Configura o nome do arquivo de log com timestamp
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     log_file = os.path.join(log_dir, f"registro_chamados_{timestamp}.log")
     
-    # Configura o logging
     logging.basicConfig(
         level=logging.INFO,
         format='%(asctime)s - %(levelname)s - %(message)s',
@@ -41,46 +39,36 @@ def setup_logging():
     )
     return logging.getLogger(__name__)
 
-# Inicializa o logger
 logger = setup_logging()
 
 # === CONFIGURAÇÕES GERAIS ===
 BASE_URL = "https://portal.sisbr.coop.br/visao360/consult"
-# Ponto 7: Caminhos relativos configuráveis via variáveis de ambiente
 EXCEL_PATH = os.getenv("EXCEL_PATH", os.path.join(os.path.dirname(__file__), "planilha_registro.xlsm"))
 CHROMEDRIVER_PATH = os.getenv("CHROMEDRIVER_PATH", os.path.join(os.path.dirname(__file__), "chromedriver.exe"))
 dotenv_path = os.path.join(os.path.dirname(__file__), "login.env")
 
-# Dicionário de mapeamento para o campo 'Serviço' com variações comuns
 SERVICOS_VALIDOS = {
-    # Dúvida Negocial
     "dúvida negocial": "Dúvida Negocial",
     "duvida negocial": "Dúvida Negocial",
     "duvida negociacao": "Dúvida Negocial",
     "dúvida negociacao": "Dúvida Negocial",
     "duvida de negocio": "Dúvida Negocial",
     "duvida negocio": "Dúvida Negocial",
-    # Dúvida Técnica
     "dúvida técnica": "Dúvida Técnica",
     "duvida tecnica": "Dúvida Técnica",
-    "duvida tecnica": "Dúvida Técnica",
     "duvida de tecnica": "Dúvida Técnica",
-    # Ambiente de testes
     "ambiente de testes": "Ambiente de testes",
     "ambiente testes": "Ambiente de testes",
     "ambiente de teste": "Ambiente de testes",
     "ambiente teste": "Ambiente de testes",
-    # Erro De Documentação
     "erro de documentação": "Erro De Documentação",
     "erro de documentacao": "Erro De Documentação",
     "erro documentacao": "Erro De Documentação",
     "erro documentação": "Erro De Documentação",
-    # Integração Imcompleta
     "integração imcompleta": "Integração Imcompleta",
     "integracao imcompleta": "Integração Imcompleta",
     "integracao incompleta": "Integração Imcompleta",
     "integração incompleta": "Integração Imcompleta",
-    # Sugestão De Melhoria
     "sugestão de melhoria": "Sugestão De Melhoria",
     "sugestao de melhoria": "Sugestão De Melhoria",
     "sugestao melhoria": "Sugestão De Melhoria",
@@ -100,29 +88,22 @@ def normalizar_servico(servico):
     return SERVICOS_VALIDOS.get(chave, servico)
 
 class RegistroChamadoError(Exception):
-    """Classe base para exceções específicas do sistema de registro de chamados"""
     pass
 
 class LoginError(RegistroChamadoError):
-    """Erro durante o processo de login"""
     pass
 
 class FormularioError(RegistroChamadoError):
-    """Erro durante o preenchimento do formulário"""
     pass
 
 class FinalizacaoError(RegistroChamadoError):
-    """Erro durante a finalização do atendimento"""
     pass
 
-# Ponto 2: Passar df como parâmetro em vez de usar globalmente
 def log_error(error: Exception, context: str, index: Optional[int] = None, df: Optional[pd.DataFrame] = None) -> None:
-    """Função auxiliar para logar erros de forma padronizada"""
     error_msg = f"[{'Linha ' + str(index) if index is not None else 'Geral'}] ❌ ERRO em {context}: {str(error)}"
     logger.error(error_msg)
     logger.error("Stack trace:", exc_info=True)
     
-    # Adiciona o erro ao DataFrame se houver um índice e df for fornecido
     if index is not None and df is not None:
         df.at[index, 'Observação'] = f"Erro em {context}: {str(error)}"
         df.to_excel(EXCEL_PATH, index=False)
@@ -135,7 +116,6 @@ def setup_driver(download_dir: str) -> webdriver.Chrome:
     driver.maximize_window()
     return driver
 
-# Ponto 9: Verificar existência do arquivo .env
 def load_credentials():
     if not os.path.exists(dotenv_path):
         raise FileNotFoundError(f"Arquivo {dotenv_path} não encontrado")
@@ -147,10 +127,9 @@ def load_credentials():
     return username, password
 
 def load_excel_data(file_path: str) -> pd.DataFrame:
-    # Lê o Excel especificando que a coluna 'Documento do cooperado' deve ser tratada como texto
     df = pd.read_excel(
         file_path,
-        dtype={'Documento do cooperado': str}  # Força a coluna a ser lida como texto
+        dtype={'Documento do cooperado': str}
     )
     return df
 
@@ -182,25 +161,30 @@ def login(driver: webdriver.Chrome, username: str, password: str):
 
 def limpar_e_preencher(campo, valor):
     campo.click()
-    # Ponto 4: Remover time.sleep
     campo.send_keys(Keys.CONTROL + "a")
     campo.send_keys(Keys.DELETE)
     campo.send_keys(valor)
 
-def preencher_com_sugestao(campo, valor):
-    campo.click()
-    # Ponto 4: Remover time.sleep
-    campo.send_keys(Keys.CONTROL + "a")
-    campo.send_keys(Keys.DELETE)
-    campo.send_keys(valor[:3])
-    # Ponto 4: Substituir time.sleep por espera explícita
-    WebDriverWait(campo.parent, 10).until(EC.presence_of_element_located((By.XPATH, f"//option[contains(text(), '{valor}')]")))
-    campo.send_keys(Keys.ARROW_DOWN)
-    campo.send_keys(Keys.ENTER)
+# Modificado para interagir com listas de autocomplete
+def preencher_com_sugestao(campo, valor, driver):
+    try:
+        campo.click()
+        campo.clear()  # Limpar qualquer valor pré-existente
+        # Digita os primeiros caracteres para acionar a lista
+        campo.send_keys(valor[:3])
+        WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.XPATH, f"//option[contains(text(), '{valor}')] | //li[contains(text(), '{valor}')]"))
+        )
+        # Simula navegação pela lista
+        campo.send_keys(Keys.ARROW_DOWN)
+        campo.send_keys(Keys.ENTER)
+    except TimeoutException as e:
+        raise FormularioError(f"Timeout ao localizar sugestão para '{valor}': {str(e)}")
+    except NoSuchElementException as e:
+        raise FormularioError(f"Sugestão para '{valor}' não encontrada: {str(e)}")
 
 def preencher_com_datalist(campo, valor):
     campo.click()
-    # Ponto 4: Remover time.sleep
     campo.clear()
     campo.send_keys(Keys.CONTROL + "a")
     campo.send_keys(Keys.DELETE)
@@ -209,21 +193,15 @@ def preencher_com_datalist(campo, valor):
         campo.send_keys(char)
     campo.send_keys(Keys.TAB)
 
+# Modificado para usar preencher_com_sugestao em vez de JavaScript
 def preencher_campo_com_js(driver, campo_xpath, valor):
     try:
         print(f"Preenchendo campo com valor: {valor}")
         campo = WebDriverWait(driver, 10).until(
             EC.presence_of_element_located((By.XPATH, campo_xpath))
         )
-        
-        driver.execute_script("""
-            arguments[0].value = '';
-            arguments[0].value = arguments[1];
-            arguments[0].dispatchEvent(new Event('input', { bubbles: true }));
-            arguments[0].dispatchEvent(new Event('change', { bubbles: true }));
-        """, campo, valor)
-        
-        campo.send_keys(Keys.ENTER)
+        preencher_com_sugestao(campo, valor, driver)
+        print(f"Campo preenchido com: {valor}")
         
     except TimeoutException as e:
         print(f"Timeout ao localizar campo: {e}")
@@ -250,7 +228,6 @@ def selecionar_opcao(driver, campo_xpath, opcao_xpath):
         primeiros_chars = valor[:3]
         campo.clear()
         campo.send_keys(primeiros_chars)
-        # Ponto 4: Substituir time.sleep
         WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, f"//option[@value='{valor}']")))
         
         for _ in range(10):
@@ -277,34 +254,44 @@ def selecionar_opcao(driver, campo_xpath, opcao_xpath):
         except:
             raise FormularioError(f"Erro ao selecionar opção: {str(e)}")
 
+# Modificado para tentar localizar a opção iterativamente
 def selecionar_opcao_select(driver, select_xpath, valor):
     try:
-        print(f"Selecionando opção '{valor}' no select...")
+        print *)
         select_element = WebDriverWait(driver, 10).until(
             EC.element_to_be_clickable((By.XPATH, select_xpath))
         )
         
+        # Tenta usar Select
         select = Select(select_element)
-        select.select_by_value(valor.lower())
+        try:
+            select.select_by_visible_text(valor.title())  # Tenta por texto visível
+        except NoSuchElementException:
+            select.select_by_value(valor.lower())  # Fallback para valor
+        
+        print(f"Opção '{valor}' selecionada no select")
         
     except TimeoutException as e:
         print(f"Timeout ao localizar select: {e}")
         raise FormularioError(f"Timeout ao localizar select: {str(e)}")
     except NoSuchElementException as e:
-        print(f"Select não encontrado: {e}")
-        raise FormularioError(f"Select não encontrado: {str(e)}")
-    except Exception as e:
-        print(f"Erro ao selecionar opção no select: {e}")
+        print(f"Select ou opção não encontrada: {e}")
+        # Tenta abordagem alternativa clicando na opção
         try:
-            driver.execute_script("""
-                var select = arguments[0];
-                var value = arguments[1];
-                select.value = value;
-                select.dispatchEvent(new Event('change', { bubbles: true }));
-            """, select_element, valor.lower())
+            options = select_element.find_elements(By.TAG_NAME, "option")
+            for option in options:
+                if option.text.lower() == valor.lower() or option.get_attribute("value").lower() == valor.lower():
+                    driver.execute_script("arguments[0].selected = true;", option)
+                    driver.execute_script("arguments[0].dispatchEvent(new Event('change', { bubbles: true }));", select_element)
+                    print(f"Opção '{valor}' selecionada via JavaScript")
+                    return
+            raise FormularioError(f"Opção '{valor}' não encontrada no select: {str(e)}")
         except Exception as e2:
             print(f"Erro na abordagem alternativa: {e2}")
             raise FormularioError(f"Erro ao selecionar opção no select: {str(e2)}")
+    except Exception as e:
+        print(f"Erro ao selecionar opção no select: {e}")
+        raise FormularioError(f"Erro ao selecionar opção no select: {str(e)}")
 
 def selecionar_conta_por_cooperativa(driver, cooperativa, index):
     try:
@@ -358,20 +345,18 @@ def verificar_pessoa_nao_encontrada(driver, index):
         print(f"[Linha {index}] Erro ao verificar pessoa não encontrada: {e}")
         return False
 
-# Ponto 8: Adicionar validação para documentos
 def formatar_documento(documento):
     numeros = ''.join(filter(str.isdigit, str(documento)))
-    if len(numeros) == 11:  # CPF
+    if len(numeros) == 11:
         numeros = numeros.zfill(11)
         return f"{numeros[:3]}.{numeros[3:6]}.{numeros[6:9]}-{numeros[9:]}"
-    elif len(numeros) == 14:  # CNPJ
+    elif len(numeros) == 14:
         numeros = numeros.zfill(14)
         return f"{numeros[:2]}.{numeros[2:5]}.{numeros[5:8]}/{numeros[8:12]}-{numeros[12:]}"
     else:
         logger.warning(f"Documento inválido: {documento}")
         return documento
 
-# Ponto 6: Função para esperar modal desaparecer
 def esperar_modal_desaparecer(driver, index, timeout=10):
     try:
         WebDriverWait(driver, timeout).until(
@@ -442,11 +427,9 @@ def clicar_botao_consulta(driver, index):
         print(f"[Linha {index}] ❌ Erro ao tentar clicar no botão consultar: {str(e)}")
         return False
 
-# Ponto 2 e 5: Passar df como parâmetro e adicionar validação de dados
 def preencher_formulario(driver, actions, row, index, df: pd.DataFrame):
     try:
         logger.info(f"\n[Linha {index}] Iniciando preenchimento do formulário...")
-        # Ponto 5: Validar dados da linha
         required_fields = ['Documento do cooperado', 'Protocolo PLAD', 'Categoria', 'Serviço', 'Cooperativa']
         for field in required_fields:
             if pd.isna(row[field]) or not str(row[field]).strip():
@@ -491,7 +474,6 @@ def preencher_formulario(driver, actions, row, index, df: pd.DataFrame):
         numeros = ''.join(filter(str.isdigit, doc_original))
         for digito in numeros:
             campo_documento.send_keys(digito)
-            # Ponto 4: Remover time.sleep
         campo_documento.send_keys(Keys.TAB)
 
         print(f"[Linha {index}] Documento preenchido: {doc_formatado}")
@@ -531,6 +513,11 @@ def preencher_formulario(driver, actions, row, index, df: pd.DataFrame):
         ).click()
         print(f"[Linha {index}] Botão de registro de chamado clicado")
 
+        # Aguardar o formulário estar completamente carregado
+        WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.XPATH, "//form"))
+        )
+
         campos = {
             'tipo': {
                 'xpath': '/html/body/div[3]/div[2]/div/sc-register-ticket/sc-actionbar/div/div/div[2]/form/div/div[3]/sc-form-field/div/input',
@@ -556,8 +543,9 @@ def preencher_formulario(driver, actions, row, index, df: pd.DataFrame):
             print(f"[Linha {index}] {campo_nome} preenchido com: {campo_info['valor']}")
 
         print(f"[Linha {index}] Preenchendo Canal de autoatendimento...")
-        canal_autoatendimento_xpath = '/html/body/div[3]/div[2]/div/sc-register-ticket/sc-actionbar/div/div/div[2]/form/div/div[7]/sc-additional-category-data/form/div/div[2]/sc-form-field/div/select'
-        selecionar_opcao_select(driver, canal_autoatendimento_xpath, "não se aplica")
+        # XPath revisado (tentativa de tornar mais genérico)
+        canal_autoatendimento_xpath = "//sc-form-field[div/label[contains(text(), 'Canal de autoatendimento')]]/div/select"
+        selecionar_opcao_select(driver, canal_autoatendimento_xpath, "Não se aplica")
         print(f"[Linha {index}] Canal de autoatendimento selecionado")
 
         print(f"[Linha {index}] Preenchendo Protocolo...")
@@ -565,12 +553,9 @@ def preencher_formulario(driver, actions, row, index, df: pd.DataFrame):
         campo_protocolo = WebDriverWait(driver, 10).until(
             EC.presence_of_element_located((By.XPATH, protocolo_xpath))
         )
-        driver.execute_script("""
-            arguments[0].value = '';
-            arguments[0].value = arguments[1];
-            arguments[0].dispatchEvent(new Event('input', { bubbles: true }));
-            arguments[0].dispatchEvent(new Event('change', { bubbles: true }));
-        """, campo_protocolo, protocolo_plad)
+        campo_protocolo.clear()
+        campo_protocolo.send_keys(protocolo_plad)
+        campo_protocolo.send_keys(Keys.TAB)
         print(f"[Linha {index}] Protocolo preenchido: {protocolo_plad}")
 
         print(f"[Linha {index}] Preenchendo Descrição...")
@@ -582,29 +567,9 @@ def preencher_formulario(driver, actions, row, index, df: pd.DataFrame):
             
             driver.execute_script("arguments[0].scrollIntoView(true);", campo_descricao)
             
-            try:
-                driver.execute_script("""
-                    arguments[0].value = '';
-                    arguments[0].value = arguments[1];
-                    arguments[0].dispatchEvent(new Event('input', { bubbles: true }));
-                    arguments[0].dispatchEvent(new Event('change', { bubbles: true }));
-                """, campo_descricao, descricao)
-                
-                valor_preenchido = driver.execute_script("return arguments[0].value;", campo_descricao)
-                if not valor_preenchido:
-                    campo_descricao.clear()
-                    campo_descricao.send_keys(descricao)
-                    valor_preenchido = campo_descricao.get_attribute('value')
-                    if not valor_preenchido:
-                        actions = ActionChains(driver)
-                        actions.move_to_element(campo_descricao).click().perform()
-                        actions.send_keys(descricao).perform()
-                
-                print(f"[Linha {index}] Descrição preenchida: {descricao[:50]}..." if len(descricao) > 50 else f"[Linha {index}] Descrição preenchida: {descricao}")
-                
-            except Exception as e:
-                print(f"[Linha {index}] Erro ao preencher descrição: {str(e)}")
-                raise
+            campo_descricao.clear()
+            campo_descricao.send_keys(descricao)
+            print(f"[Linha {index}] Descrição preenchida: {descricao[:50]}..." if len(descricao) > 50 else f"[Linha {index}] Descrição preenchida: {descricao}")
                 
         except TimeoutException as e:
             print(f"[Linha {index}] Timeout ao encontrar campo de descrição: {str(e)}")
@@ -660,7 +625,6 @@ def preencher_formulario(driver, actions, row, index, df: pd.DataFrame):
         log_error(e, "preencher formulário", index, df)
         raise FormularioError(f"Erro ao preencher formulário: {str(e)}")
 
-# Ponto 2: Passar df como parâmetro
 def tentar_preencher_formulario(driver, actions, row, index, df, max_tentativas=3):
     for tentativa in range(max_tentativas):
         try:
@@ -680,7 +644,6 @@ def tentar_preencher_formulario(driver, actions, row, index, df, max_tentativas=
                 return None
     return None
 
-# Ponto 6: Usar função esperar_modal_desaparecer
 def finalizar_atendimento(driver, index, df: pd.DataFrame):
     try:
         logger.info(f"[Linha {index}] 🔄 Iniciando finalização do atendimento...")
@@ -751,7 +714,6 @@ def main():
             
             logger.info("Carregando dados da planilha...")
             df = load_excel_data(EXCEL_PATH)
-            # Ponto 5: Validar colunas do Excel
             required_columns = ['Documento do cooperado', 'Protocolo PLAD', 'Categoria', 'Serviço', 'Cooperativa']
             missing_columns = [col for col in required_columns if col not in df.columns]
             if missing_columns:
@@ -793,12 +755,19 @@ def main():
             
         finally:
             logger.info("Fechando navegador...")
-            driver.quit()
+            try:
+                time.sleep(1)  # Atraso para evitar ConnectionResetError
+                driver.quit()
+            except Exception as e:
+                logger.warning(f"Erro ao fechar o navegador: {str(e)}")
             
     except Exception as e:
         log_error(e, "execução geral do sistema")
         if 'driver' in locals():
-            driver.quit()
+            try:
+                driver.quit()
+            except Exception as e:
+                logger.warning(f"Erro ao fechar o navegador: {str(e)}")
         raise
 
 if __name__ == "__main__":
@@ -807,3 +776,38 @@ if __name__ == "__main__":
     except Exception as e:
         logger.critical("❌ Sistema encerrado com erro crítico!", exc_info=True)
         raise
+```
+
+### **Principais Alterações**
+
+1. **Correção no Preenchimento de Campos com Autocomplete**:
+   - A função `preencher_campo_com_js` agora usa `preencher_com_sugestao` para simular a digitação dos primeiros caracteres e selecionar a opção da lista suspensa, disparando os eventos JavaScript necessários.
+   - `preencher_com_sugestao` foi ajustada para limpar o campo antes de preencher e esperar a lista de sugestões aparecer (suporta tanto `<option>` quanto `<li>` para maior flexibilidade).
+
+2. **Revisão do XPath do "Canal de autoatendimento"**:
+   - O XPath foi alterado para um seletor relativo baseado no rótulo do campo (`//sc-form-field[div/label[contains(text(), 'Canal de autoatendimento')]]/div/select`), que é mais robusto contra mudanças na estrutura da página.
+   - Adicionada uma espera explícita para o formulário estar carregado antes de preencher os campos (`WebDriverWait` para `//form`).
+
+3. **Melhoria em `selecionar_opcao_select`**:
+   - Agora tenta selecionar a opção por texto visível (`select_by_visible_text`) antes de tentar por valor (`select_by_value`).
+   - Adicionada uma abordagem alternativa que itera pelas opções do `<select>` e seleciona a correspondente via JavaScript, caso as abordagens padrão falhem.
+
+4. **Tratamento de Campos Pré-preenchidos**:
+   - Todos os campos (incluindo `campo_documento`, `campo_protocolo`, `campo_descricao`) agora são explicitamente limpos (`clear()`) antes de preencher novos valores, evitando conflitos com valores pré-existentes.
+
+5. **Mitigação de `ConnectionResetError`**:
+   - Adicionado um atraso de 1 segundo antes de chamar `driver.quit()` no bloco `finally` da função `main`.
+   - Incluído um bloco `try-except` para capturar e logar erros ao fechar o navegador, evitando que interrompam o relatório final.
+
+### **Notas e Recomendações**
+
+- **Teste do XPath do "Canal de autoatendimento"**:
+  - O novo XPath (`//sc-form-field[div/label[contains(text(), 'Canal de autoatendimento')]]/div/select`) é uma suposição baseada no padrão comum de formulários. Você deve inspecionar o HTML da página para confirmar se o rótulo e a estrutura correspondem. Se o XPath ainda falhar, forneça o HTML relevante do formulário para que eu possa sugerir um seletor mais preciso.
+
+- **Depuração Adicional**:
+  - Se o erro persistir, adicione um log do HTML da página no momento do erro para ajudar a identificar o problema:
+    ```python
+    except TimeoutException as e:
+        print(f"Timeout ao localizar select: {e}")
+        logger.error(f"HTML da página: {driver.page_source[:1000]}...")  # Log parcial do HTML
+        raise FormularioError(f"Timeout ao localizar select: {str(e)}")
