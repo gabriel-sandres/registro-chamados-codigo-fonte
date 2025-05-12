@@ -338,7 +338,8 @@ def selecionar_conta_por_cooperativa(driver, cooperativa, index):
         conta_encontrada = False
         for option in options:
             texto_opcao = option.text.strip()
-            if texto_opcao.startswith(f"Coop: {cooperativa}"):
+            # Verifica se o texto da opção contém a cooperativa
+            if f"Coop: {cooperativa}" in texto_opcao:
                 print(f"[Linha {index}] Conta encontrada: {texto_opcao}")
                 try:
                     option.click()
@@ -357,14 +358,23 @@ def selecionar_conta_por_cooperativa(driver, cooperativa, index):
             
         # Verifica se a conta foi realmente selecionada
         time.sleep(1)  # Pequena pausa para garantir que a seleção foi processada
-        selected_option = select_element.find_element(By.XPATH, "./option[@selected]")
-        if not selected_option.text.strip().startswith(f"Coop: {cooperativa}"):
-            print(f"[Linha {index}] ⚠️ Conta selecionada não corresponde à cooperativa {cooperativa}")
+        try:
+            selected_option = select_element.find_element(By.XPATH, "./option[@selected]")
+            texto_selecionado = selected_option.text.strip()
+            print(f"[Linha {index}] Conta selecionada: {texto_selecionado}")
+            
+            # Verifica se o texto selecionado contém a cooperativa
+            if f"Coop: {cooperativa}" not in texto_selecionado:
+                print(f"[Linha {index}] ⚠️ Conta selecionada não corresponde à cooperativa {cooperativa}")
+                return False
+        except NoSuchElementException:
+            print(f"[Linha {index}] ⚠️ Não foi possível verificar a conta selecionada")
             return False
             
         # Espera o spinner desaparecer após a seleção
         esperar_spinner_desaparecer(driver, index)
         
+        print(f"[Linha {index}] ✅ Conta selecionada com sucesso")
         return True
 
     except TimeoutException as e:
@@ -476,23 +486,42 @@ def verificar_tela_atual(driver, index):
     try:
         # Verificar se está na tela de consulta (campo de documento presente)
         campo_documento_xpath = '/html/body/div/sc-app/sc-template/sc-root/main/section/sc-content/sc-consult/div/div[2]/div/sc-card-content/div/main/form/div/div[2]/sc-form-field/div/input'
-        WebDriverWait(driver, 5).until(
-            EC.presence_of_element_located((By.XPATH, campo_documento_xpath))
-        )
-        print(f"[Linha {index}] Tela atual: Consulta")
-        return "consulta"
-    except TimeoutException:
         try:
-            # Verificar se está na tela de seleção de conta
-            select_conta_xpath = '/html/body/div[1]/sc-app/sc-template/sc-root/main/aside/sc-sidebar-container/aside/sc-sidebar/div[2]/div[1]/div/form/div/select'
+            WebDriverWait(driver, 5).until(
+                EC.presence_of_element_located((By.XPATH, campo_documento_xpath))
+            )
+            print(f"[Linha {index}] Tela atual: Consulta")
+            return "consulta"
+        except TimeoutException:
+            pass
+
+        # Verificar se está na tela de seleção de conta
+        select_conta_xpath = '/html/body/div[1]/sc-app/sc-template/sc-root/main/aside/sc-sidebar-container/aside/sc-sidebar/div[2]/div[1]/div/form/div/select'
+        try:
             WebDriverWait(driver, 5).until(
                 EC.presence_of_element_located((By.XPATH, select_conta_xpath))
             )
             print(f"[Linha {index}] Tela atual: Seleção de conta")
             return "selecao_conta"
         except TimeoutException:
-            print(f"[Linha {index}] Tela atual desconhecida")
-            return "desconhecida"
+            pass
+
+        # Verificar se está na tela de formulário
+        form_xpath = "//form"
+        try:
+            WebDriverWait(driver, 5).until(
+                EC.presence_of_element_located((By.XPATH, form_xpath))
+            )
+            print(f"[Linha {index}] Tela atual: Formulário")
+            return "formulario"
+        except TimeoutException:
+            pass
+
+        print(f"[Linha {index}] Tela atual desconhecida")
+        return "desconhecida"
+    except Exception as e:
+        print(f"[Linha {index}] Erro ao verificar tela atual: {e}")
+        return "desconhecida"
 
 def preencher_formulario(driver, actions, row, index, df: pd.DataFrame):
     try:
