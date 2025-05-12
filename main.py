@@ -532,15 +532,22 @@ def verificar_tela_atual(driver, index):
         print(f"[Linha {index}] Erro ao verificar tela atual: {e}")
         return "desconhecida"
 
-def preencher_formulario(driver, actions, row, index, df: pd.DataFrame):
+def preencher_formulario(driver, actions, row, index, df: pd.DataFrame, tentativa=0):
     try:
-        logger.info(f"\n[Linha {index}] Iniciando preenchimento do formulário...")
+        if tentativa >= 3:  # Limita o número de tentativas
+            print(f"[Linha {index}] ❌ Número máximo de tentativas excedido")
+            df.at[index, 'Observação'] = "Número máximo de tentativas excedido"
+            df.to_excel(EXCEL_PATH, index=False)
+            return None
+
+        logger.info(f"\n[Linha {index}] Iniciando preenchimento do formulário... (Tentativa {tentativa + 1})")
         
         # Espera o spinner desaparecer antes de começar
         esperar_spinner_desaparecer(driver, index)
         
         # Verifica se está na tela correta
         tela_atual = verificar_tela_atual(driver, index)
+        
         if tela_atual == "formulario":
             print(f"[Linha {index}] Já está na tela de formulário")
         elif tela_atual == "selecao_conta":
@@ -549,14 +556,33 @@ def preencher_formulario(driver, actions, row, index, df: pd.DataFrame):
                 df.at[index, 'Observação'] = "Falha ao selecionar conta"
                 df.to_excel(EXCEL_PATH, index=False)
                 return None
+        elif tela_atual == "consulta":
+            print(f"[Linha {index}] Está na tela de consulta. Preenchendo documento...")
+            # Preenche o documento e clica em consultar
+            campo_documento_xpath = '/html/body/div/sc-app/sc-template/sc-root/main/section/sc-content/sc-consult/div/div[2]/div/sc-card-content/div/main/form/div/div[2]/sc-form-field/div/input'
+            campo_documento = WebDriverWait(driver, 30).until(
+                EC.presence_of_element_located((By.XPATH, campo_documento_xpath))
+            )
+            campo_documento.clear()
+            numeros = ''.join(filter(str.isdigit, str(row['Documento do cooperado'])))
+            for digito in numeros:
+                campo_documento.send_keys(digito)
+            campo_documento.send_keys(Keys.TAB)
+            
+            if not clicar_botao_consulta(driver, index):
+                df.at[index, 'Observação'] = "Falha ao clicar no botão consultar"
+                df.to_excel(EXCEL_PATH, index=False)
+                return None
+                
+            # Aguarda a tela mudar
+            time.sleep(2)
+            return preencher_formulario(driver, actions, row, index, df, tentativa + 1)
         else:
-            print(f"[Linha {index}] ⚠️ Não está na tela correta. Tentando voltar...")
+            print(f"[Linha {index}] ⚠️ Tela desconhecida. Tentando voltar...")
             driver.get(BASE_URL)
             time.sleep(2)
             esperar_spinner_desaparecer(driver, index)
-            
-            # Tenta o processo novamente
-            return preencher_formulario(driver, actions, row, index, df)
+            return preencher_formulario(driver, actions, row, index, df, tentativa + 1)
         
         # Verifica se está realmente na tela de formulário
         try:
@@ -568,7 +594,7 @@ def preencher_formulario(driver, actions, row, index, df: pd.DataFrame):
             df.at[index, 'Observação'] = "Falha ao carregar formulário"
             df.to_excel(EXCEL_PATH, index=False)
             return None
-        
+
         required_fields = ['Documento do cooperado', 'Protocolo PLAD', 'Categoria', 'Serviço', 'Cooperativa']
         for field in required_fields:
             if pd.isna(row[field]) or not str(row[field]).strip():
@@ -786,28 +812,7 @@ def tentar_preencher_formulario(driver, actions, row, index, df, max_tentativas=
                 print(f"[Linha {index}] 🔄 Tentativa {tentativa + 1} de {max_tentativas}")
                 driver.refresh()
                 WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.TAG_NAME, "body")))
-                
-                # Verificar tela atual e reiniciar processo se necessário
-                tela_atual = verificar_tela_atual(driver, index)
-                if tela_atual == "selecao_conta":
-                    print(f"[Linha {index}] Reiniciando processo desde a seleção de conta...")
-                    if not selecionar_conta_por_cooperativa(driver, row['Cooperativa'], index):
-                        df.at[index, 'Observação'] = "Conta não encontrada para a cooperativa na retentativa"
-                        df.to_excel(EXCEL_PATH, index=False)
-                        return None
-                    
-                    print(f"[Linha {index}] Aguardando botão de categoria...")
-                    xpath_categoria = '/html/body/div[1]/sc-app/sc-template/sc-root/main/aside/sc-sidebar-container/aside/sc-sidebar/div[4]/div[1]/sc-card/div/div/div/div'
-                    WebDriverWait(driver, 30).until(EC.element_to_be_clickable((By.XPATH, xpath_categoria)))
-                    actions.move_to_element(driver.find_element(By.XPATH, xpath_categoria)).click().perform()
-                    print(f"[Linha {index}] Botão de categoria clicado")
-
-                    print(f"[Linha {index}] Aguardando botão de registro de chamado...")
-                    registro_xpath = '/html/body/div[1]/sc-app/sc-register-ticket-button/div/div/div/button'
-                    WebDriverWait(driver, 30).until(EC.element_to_be_clickable((By.XPATH, registro_xpath)))
-                    actions.move_to_element(driver.find_element(By.XPATH, registro_xpath)).click().perform()
-                    print(f"[Linha {index}] Botão de registro de chamado clicado")
-
+            
             return preencher_formulario(driver, actions, row, index, df)
             
         except FormularioError as e:
