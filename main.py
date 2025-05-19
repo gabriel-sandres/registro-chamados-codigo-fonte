@@ -816,7 +816,11 @@ def clicar_menu_cobranca(driver, index):
         )
         driver.execute_script("arguments[0].scrollIntoView(true);", menu_cobranca)
         time.sleep(1)
-        menu_cobranca.click()
+        try:
+            menu_cobranca.click()
+        except Exception as e:
+            print(f"[Linha {index}] ⚠️ Clique interceptado, tentando via JavaScript: {str(e)}")
+            driver.execute_script("arguments[0].click();", menu_cobranca)
         print(f"[Linha {index}] ✅ Menu 'Cobrança' clicado com sucesso")
         return True
     except Exception as e:
@@ -896,6 +900,18 @@ def preencher_formulario(driver, actions, row, index, df: pd.DataFrame, tentativ
                 return None
             if not clicar_botao_registro_chamado(driver, index):
                 df.at[index, 'Observação'] = "Falha ao clicar no botão de registro de chamado"
+                df.to_excel(EXCEL_PATH, index=False)
+                return None
+            # Aguarda o campo de categoria do formulário ficar visível/clicável
+            try:
+                categoria_xpath = '/html/body/div[1]/sc-app/sc-template/sc-root/main/section/sc-content/sc-consult/div/div[2]/div/sc-card-content/div/main/form/div/div[4]/sc-card/div/sc-card-content/div/div/div[1]/sc-form-field/div/input'
+                WebDriverWait(driver, 20).until(
+                    EC.element_to_be_clickable((By.XPATH, categoria_xpath))
+                )
+                print(f"[Linha {index}] ✅ Formulário aberto e pronto para preenchimento")
+            except Exception as e:
+                print(f"[Linha {index}] ❌ Formulário não abriu corretamente: {str(e)}")
+                df.at[index, 'Observação'] = "Formulário não abriu corretamente"
                 df.to_excel(EXCEL_PATH, index=False)
                 return None
             return preencher_formulario(driver, actions, row, index, df, tentativa + 1)
