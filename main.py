@@ -610,6 +610,15 @@ def clicar_botao_consulta(driver, index):
                     return True
                 except Exception as e:
                     print(f"[Linha {index}] ⚠️ Falha ao clicar via ActionChains: {str(e)}")
+
+                try:
+                    driver.execute_script("arguments[0].scrollIntoView(true);", botao)
+                    driver.execute_script("arguments[0].click();", botao)
+                    time.sleep(2)  # Aguarda efeito do clique
+                    return True
+                except Exception as e:
+                    print(f"[Linha {index}] ❌ Falha no clique via JS: {str(e)}")
+
                 
                 # Se chegou aqui, nenhum método funcionou
                 tentativas += 1
@@ -760,8 +769,12 @@ def preencher_formulario(driver, actions, row, index, df: pd.DataFrame, tentativ
                     try:
                         print(f"[Linha {index}] Aguardando mudança de tela...")
                         WebDriverWait(driver, 10).until(
-                            lambda d: verificar_tela_atual(d, index) != "consulta"
+                            lambda d: (
+                                print(f"[Linha {index}] Após clique, tela atual: {verificar_tela_atual(d, index)}") or
+                                verificar_tela_atual(d, index) != "consulta"
+                            )
                         )
+
                         print(f"[Linha {index}] ✅ Tela mudou após clique em consultar")
                         return preencher_formulario(driver, actions, row, index, df, tentativa + 1)
                     except TimeoutException:
