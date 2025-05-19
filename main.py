@@ -690,6 +690,85 @@ def verificar_tela_atual(driver, index):
         print(f"[Linha {index}] Erro ao verificar tela atual: {e}")
         return "desconhecida"
 
+def clicar_botao_abrir(driver, index):
+    try:
+        print(f"[Linha {index}] Tentando clicar no botão Abrir...")
+        botao_xpath = '/html/body/div[1]/sc-app/sc-template/sc-root/main/section/sc-content/sc-consult/div/div[2]/div/sc-card-content/div/main/form/div/div[4]/sc-card/div/sc-card-content/div/div/div[2]/sc-button/button'
+        
+        # Espera o botão estar presente e clicável
+        try:
+            botao = WebDriverWait(driver, 30).until(
+                EC.element_to_be_clickable((By.XPATH, botao_xpath))
+            )
+            print(f"[Linha {index}] ✅ Botão Abrir encontrado")
+        except TimeoutException:
+            print(f"[Linha {index}] ❌ Timeout ao localizar botão Abrir")
+            return False
+        
+        # Rola até o botão
+        driver.execute_script("arguments[0].scrollIntoView(true);", botao)
+        time.sleep(1)
+        
+        # Tenta diferentes métodos de clique
+        tentativas = 0
+        max_tentativas = 3
+        
+        while tentativas < max_tentativas:
+            try:
+                print(f"[Linha {index}] Tentativa {tentativas + 1} de clicar no botão...")
+                
+                # Tenta clicar via JavaScript primeiro
+                try:
+                    driver.execute_script("arguments[0].scrollIntoView(true);", botao)
+                    driver.execute_script("arguments[0].click();", botao)
+                    time.sleep(2)  # Aguarda efeito do clique
+                    print(f"[Linha {index}] ✅ Botão clicado via JavaScript")
+                    return True
+                except Exception as e:
+                    print(f"[Linha {index}] ⚠️ Falha ao clicar via JavaScript: {str(e)}")
+                
+                # Tenta clicar normalmente
+                try:
+                    botao.click()
+                    time.sleep(2)  # Aguarda efeito do clique
+                    print(f"[Linha {index}] ✅ Botão clicado com sucesso")
+                    return True
+                except ElementClickInterceptedException:
+                    print(f"[Linha {index}] ⚠️ Clique interceptado, tentando via ActionChains...")
+                
+                # Tenta clicar via ActionChains
+                try:
+                    actions = ActionChains(driver)
+                    actions.move_to_element(botao).click().perform()
+                    time.sleep(2)  # Aguarda efeito do clique
+                    print(f"[Linha {index}] ✅ Botão clicado via ActionChains")
+                    return True
+                except Exception as e:
+                    print(f"[Linha {index}] ⚠️ Falha ao clicar via ActionChains: {str(e)}")
+                
+                # Se chegou aqui, nenhum método funcionou
+                tentativas += 1
+                if tentativas < max_tentativas:
+                    print(f"[Linha {index}] ⚠️ Tentando novamente em 1 segundo...")
+                    time.sleep(1)
+                else:
+                    print(f"[Linha {index}] ❌ Todas as tentativas de clique falharam")
+                    return False
+                
+            except Exception as e:
+                print(f"[Linha {index}] ⚠️ Erro durante tentativa de clique: {str(e)}")
+                tentativas += 1
+                if tentativas < max_tentativas:
+                    time.sleep(1)
+                else:
+                    return False
+        
+        return False
+        
+    except Exception as e:
+        print(f"[Linha {index}] ❌ Erro ao tentar clicar no botão Abrir: {str(e)}")
+        return False
+
 def preencher_formulario(driver, actions, row, index, df: pd.DataFrame, tentativa=0, max_tentativas_por_tela=3):
     try:
         if tentativa >= max_tentativas_por_tela:
@@ -708,12 +787,41 @@ def preencher_formulario(driver, actions, row, index, df: pd.DataFrame, tentativ
         
         if tela_atual == "formulario":
             print(f"[Linha {index}] Já está na tela de formulário")
+            # Preenche os campos do formulário
+            try:
+                # Preenche a categoria
+                categoria_xpath = '/html/body/div[1]/sc-app/sc-template/sc-root/main/section/sc-content/sc-consult/div/div[2]/div/sc-card-content/div/main/form/div/div[4]/sc-card/div/sc-card-content/div/div/div[1]/sc-form-field/div/input'
+                preencher_campo_com_js(driver, categoria_xpath, row['Categoria'])
+                time.sleep(1)
+
+                # Preenche o serviço
+                servico_xpath = '/html/body/div[1]/sc-app/sc-template/sc-root/main/section/sc-content/sc-consult/div/div[2]/div/sc-card-content/div/main/form/div/div[4]/sc-card/div/sc-card-content/div/div/div[2]/sc-form-field/div/input'
+                servico_normalizado = normalizar_servico(row['Serviço'])
+                preencher_campo_com_js(driver, servico_xpath, servico_normalizado)
+                time.sleep(1)
+
+                # Preenche o protocolo PLAD
+                protocolo_xpath = '/html/body/div[1]/sc-app/sc-template/sc-root/main/section/sc-content/sc-consult/div/div[2]/div/sc-card-content/div/main/form/div/div[4]/sc-card/div/sc-card-content/div/div/div[3]/sc-form-field/div/input'
+                preencher_campo_com_js(driver, protocolo_xpath, str(row['Protocolo PLAD']))
+                time.sleep(1)
+
+                print(f"[Linha {index}] ✅ Formulário preenchido com sucesso")
+                return True
+
+            except Exception as e:
+                print(f"[Linha {index}] ❌ Erro ao preencher formulário: {str(e)}")
+                df.at[index, 'Observação'] = f"Erro ao preencher formulário: {str(e)}"
+                df.to_excel(EXCEL_PATH, index=False)
+                return None
+
         elif tela_atual == "selecao_conta":
             print(f"[Linha {index}] ⚠️ Está na tela de seleção de conta. Tentando selecionar conta...")
             if not selecionar_conta_por_cooperativa(driver, row['Cooperativa'], index):
                 df.at[index, 'Observação'] = "Falha ao selecionar conta"
                 df.to_excel(EXCEL_PATH, index=False)
                 return None
+            return preencher_formulario(driver, actions, row, index, df, tentativa + 1)
+
         elif tela_atual == "consulta":
             print(f"[Linha {index}] Está na tela de consulta. Preenchendo documento...")
             campo_documento_xpath = '/html/body/div/sc-app/sc-template/sc-root/main/section/sc-content/sc-consult/div/div[2]/div/sc-card-content/div/main/form/div/div[2]/sc-form-field/div/input'
@@ -783,7 +891,34 @@ def preencher_formulario(driver, actions, row, index, df: pd.DataFrame, tentativ
                             )
                         )
                         print(f"[Linha {index}] ✅ Tela mudou após clique em consultar")
-                        return preencher_formulario(driver, actions, row, index, df, tentativa + 1)
+                        
+                        # Verifica se a pessoa foi encontrada
+                        if verificar_pessoa_nao_encontrada(driver, index):
+                            print(f"[Linha {index}] ❌ Pessoa não encontrada")
+                            df.at[index, 'Observação'] = "Pessoa não encontrada"
+                            df.to_excel(EXCEL_PATH, index=False)
+                            return None
+                        
+                        # Tenta clicar no botão Abrir
+                        if not clicar_botao_abrir(driver, index):
+                            print(f"[Linha {index}] ❌ Falha ao clicar no botão Abrir")
+                            df.at[index, 'Observação'] = "Falha ao clicar no botão Abrir"
+                            df.to_excel(EXCEL_PATH, index=False)
+                            return None
+                        
+                        # Aguarda a mudança para a tela de seleção de conta
+                        try:
+                            WebDriverWait(driver, 10).until(
+                                lambda d: verificar_tela_atual(d, index) == "selecao_conta"
+                            )
+                            print(f"[Linha {index}] ✅ Tela mudou para seleção de conta")
+                            return preencher_formulario(driver, actions, row, index, df, tentativa + 1)
+                        except TimeoutException:
+                            print(f"[Linha {index}] ❌ Tela não mudou para seleção de conta")
+                            df.at[index, 'Observação'] = "Tela não mudou para seleção de conta"
+                            df.to_excel(EXCEL_PATH, index=False)
+                            return None
+                        
                     except TimeoutException:
                         print(f"[Linha {index}] ❌ Tela não mudou após clique em consultar")
                         df.at[index, 'Observação'] = "Tela não avançou após clique"
