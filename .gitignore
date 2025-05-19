@@ -1,0 +1,44 @@
+# Arquivos de ambiente e configuração
+.env
+*.env
+login.env
+ 
+# Arquivos de log
+logs/
+*.log
+ 
+# Arquivos do Excel
+*.xlsm
+*.xlsx
+*.xls
+ 
+# Arquivos do Chrome
+chromedriver.exe
+chromedriver
+ 
+# Arquivos do Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+ 
+# Arquivos do sistema
+.DS_Store
+Thumbs.db
