@@ -42,7 +42,7 @@ logger = setup_logging()
 
 # === CONFIGURAÇÕES GERAIS ===
 BASE_URL = "https://portal.sisbr.coop.br/visao360/consult"
-EXCEL_PATH = os.getenv("EXCEL_PATH", os.path.join(os.path.dirname(__file__), "planilha_registro.xlsm"))
+EXCEL_PATH = os.getenv("EXCEL_PATH", os.path.join(os.path.dirname(__file__), "planilha_registro.xlsx"))
 CHROMEDRIVER_PATH = os.getenv("CHROMEDRIVER_PATH", os.path.join(os.path.dirname(__file__), "chromedriver.exe"))
 dotenv_path = os.path.join(os.path.dirname(__file__), "login.env")
 
