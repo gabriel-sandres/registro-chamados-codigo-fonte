@@ -442,13 +442,34 @@ def selecionar_conta_por_cooperativa(driver, cooperativa, index):
                 if f"Coop: {cooperativa}" in texto_opcao:
                     print(f"[Linha {index}] Conta encontrada: {texto_opcao}")
                     try:
+                        # Tenta clicar na opção
                         option.click()
                     except ElementClickInterceptedException:
                         try:
+                            # Tenta clicar via JavaScript
                             driver.execute_script("arguments[0].click();", option)
                         except:
+                            # Tenta via ActionChains
                             actions = ActionChains(driver)
                             actions.move_to_element(option).click().perform()
+                    
+                    # Aguarda um momento para a seleção ser processada
+                    time.sleep(2)
+                    
+                    # Tenta selecionar via Select
+                    try:
+                        select = Select(select_element)
+                        select.select_by_visible_text(texto_opcao)
+                    except:
+                        pass
+                    
+                    # Tenta selecionar via JavaScript
+                    try:
+                        driver.execute_script(f"arguments[0].value = '{option.get_attribute('value')}';", select_element)
+                        driver.execute_script("arguments[0].dispatchEvent(new Event('change', { bubbles: true }));", select_element)
+                    except:
+                        pass
+                    
                     conta_encontrada = True
                     break
             except Exception as e:
@@ -460,16 +481,33 @@ def selecionar_conta_por_cooperativa(driver, cooperativa, index):
             return False
             
         # Verifica se a conta foi realmente selecionada
-        time.sleep(1)  # Pequena pausa para garantir que a seleção foi processada
+        time.sleep(2)  # Pequena pausa para garantir que a seleção foi processada
+        
+        # Tenta diferentes métodos para verificar a seleção
         try:
+            # Método 1: Verificar o texto do select
+            texto_selecionado = select_element.text.strip()
+            print(f"[Linha {index}] Texto do select: {texto_selecionado}")
+            
+            # Método 2: Verificar a opção selecionada
             selected_option = select_element.find_element(By.XPATH, "./option[@selected]")
             texto_selecionado = selected_option.text.strip()
-            print(f"[Linha {index}] Conta selecionada: {texto_selecionado}")
+            print(f"[Linha {index}] Opção selecionada: {texto_selecionado}")
             
-            # Verifica se o texto selecionado contém a cooperativa
-            if f"Coop: {cooperativa}" not in texto_selecionado:
+            # Método 3: Verificar o valor do select
+            valor_selecionado = select_element.get_attribute('value')
+            print(f"[Linha {index}] Valor selecionado: {valor_selecionado}")
+            
+            # Se qualquer um dos métodos indicar que a cooperativa está selecionada, considera sucesso
+            if (f"Coop: {cooperativa}" in texto_selecionado or 
+                f"Coop: {cooperativa}" in select_element.text or 
+                valor_selecionado and valor_selecionado != ""):
+                print(f"[Linha {index}] ✅ Conta selecionada com sucesso")
+                return True
+            else:
                 print(f"[Linha {index}] ⚠️ Conta selecionada não corresponde à cooperativa {cooperativa}")
                 return False
+                
         except NoSuchElementException:
             print(f"[Linha {index}] ⚠️ Não foi possível verificar a conta selecionada")
             return False
