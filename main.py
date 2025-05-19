@@ -564,39 +564,72 @@ def clicar_botao_consulta(driver, index):
         print(f"[Linha {index}] Tentando clicar no botão consultar...")
         botao_xpath = '/html/body/div/sc-app/sc-template/sc-root/main/section/sc-content/sc-consult/div/div[2]/div/sc-card-content/div/main/form/div/div[3]/sc-button/button'
         
-        botao = WebDriverWait(driver, 30).until(
-            EC.element_to_be_clickable((By.XPATH, botao_xpath))
-        )
+        # Espera o botão estar presente e clicável
+        try:
+            botao = WebDriverWait(driver, 30).until(
+                EC.element_to_be_clickable((By.XPATH, botao_xpath))
+            )
+            print(f"[Linha {index}] ✅ Botão consultar encontrado")
+        except TimeoutException:
+            print(f"[Linha {index}] ❌ Timeout ao localizar botão consultar")
+            return False
         
+        # Rola até o botão
+        driver.execute_script("arguments[0].scrollIntoView(true);", botao)
+        time.sleep(1)
+        
+        # Tenta diferentes métodos de clique
         tentativas = 0
         max_tentativas = 3
+        
         while tentativas < max_tentativas:
             try:
-                driver.execute_script("arguments[0].scrollIntoView(true);", botao)
-                actions = ActionChains(driver)
-                actions.move_to_element(botao).click().perform()
-                print(f"[Linha {index}] Botão consultar clicado com sucesso")
-                return True
-            except ElementClickInterceptedException:
+                print(f"[Linha {index}] Tentativa {tentativas + 1} de clicar no botão...")
+                
+                # Tenta clicar normalmente
+                try:
+                    botao.click()
+                    print(f"[Linha {index}] ✅ Botão clicado com sucesso")
+                    return True
+                except ElementClickInterceptedException:
+                    print(f"[Linha {index}] ⚠️ Clique interceptado, tentando via JavaScript...")
+                
+                # Tenta clicar via JavaScript
                 try:
                     driver.execute_script("arguments[0].click();", botao)
-                    print(f"[Linha {index}] Botão consultar clicado via JavaScript")
+                    print(f"[Linha {index}] ✅ Botão clicado via JavaScript")
                     return True
-                except:
-                    tentativas += 1
-                    if tentativas < max_tentativas:
-                        print(f"[Linha {index}] Tentativa {tentativas} falhou, tentando novamente...")
-                        time.sleep(1)
-                    else:
-                        print(f"[Linha {index}] ❌ Não foi possível clicar no botão após {max_tentativas} tentativas")
-                        return False
+                except Exception as e:
+                    print(f"[Linha {index}] ⚠️ Falha ao clicar via JavaScript: {str(e)}")
+                
+                # Tenta clicar via ActionChains
+                try:
+                    actions = ActionChains(driver)
+                    actions.move_to_element(botao).click().perform()
+                    print(f"[Linha {index}] ✅ Botão clicado via ActionChains")
+                    return True
+                except Exception as e:
+                    print(f"[Linha {index}] ⚠️ Falha ao clicar via ActionChains: {str(e)}")
+                
+                # Se chegou aqui, nenhum método funcionou
+                tentativas += 1
+                if tentativas < max_tentativas:
+                    print(f"[Linha {index}] ⚠️ Tentando novamente em 1 segundo...")
+                    time.sleep(1)
+                else:
+                    print(f"[Linha {index}] ❌ Todas as tentativas de clique falharam")
+                    return False
+                
+            except Exception as e:
+                print(f"[Linha {index}] ⚠️ Erro durante tentativa de clique: {str(e)}")
+                tentativas += 1
+                if tentativas < max_tentativas:
+                    time.sleep(1)
+                else:
+                    return False
+        
         return False
-    except TimeoutException as e:
-        print(f"[Linha {index}] Timeout ao localizar botão consultar: {str(e)}")
-        return False
-    except NoSuchElementException as e:
-        print(f"[Linha {index}] Botão consultar não encontrado: {str(e)}")
-        return False
+        
     except Exception as e:
         print(f"[Linha {index}] ❌ Erro ao tentar clicar no botão consultar: {str(e)}")
         return False
@@ -718,12 +751,14 @@ def preencher_formulario(driver, actions, row, index, df: pd.DataFrame, tentativ
                     
                     # Tenta clicar no botão consultar
                     if not clicar_botao_consulta(driver, index):
+                        print(f"[Linha {index}] ❌ Falha ao clicar no botão consultar")
                         df.at[index, 'Observação'] = "Falha ao clicar no botão consultar"
                         df.to_excel(EXCEL_PATH, index=False)
                         return None
                     
                     # Aguarda a mudança de tela
                     try:
+                        print(f"[Linha {index}] Aguardando mudança de tela...")
                         WebDriverWait(driver, 10).until(
                             lambda d: verificar_tela_atual(d, index) != "consulta"
                         )
