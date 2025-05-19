@@ -881,47 +881,34 @@ def preencher_formulario(driver, actions, row, index, df: pd.DataFrame, tentativ
                         df.to_excel(EXCEL_PATH, index=False)
                         return None
                     
-                    # Aguarda a mudança de tela
-                    try:
-                        print(f"[Linha {index}] Aguardando mudança de tela...")
-                        WebDriverWait(driver, 10).until(
-                            lambda d: (
-                                print(f"[Linha {index}] Após clique, tela atual: {verificar_tela_atual(d, index)}") or
-                                verificar_tela_atual(d, index) != "consulta"
-                            )
-                        )
-                        print(f"[Linha {index}] ✅ Tela mudou após clique em consultar")
-                        
-                        # Verifica se a pessoa foi encontrada
-                        if verificar_pessoa_nao_encontrada(driver, index):
-                            print(f"[Linha {index}] ❌ Pessoa não encontrada")
-                            df.at[index, 'Observação'] = "Pessoa não encontrada"
-                            df.to_excel(EXCEL_PATH, index=False)
-                            return None
-                        
-                        # Tenta clicar no botão Abrir
-                        if not clicar_botao_abrir(driver, index):
-                            print(f"[Linha {index}] ❌ Falha ao clicar no botão Abrir")
-                            df.at[index, 'Observação'] = "Falha ao clicar no botão Abrir"
-                            df.to_excel(EXCEL_PATH, index=False)
-                            return None
-                        
-                        # Aguarda a mudança para a tela de seleção de conta
-                        try:
-                            WebDriverWait(driver, 10).until(
-                                lambda d: verificar_tela_atual(d, index) == "selecao_conta"
-                            )
-                            print(f"[Linha {index}] ✅ Tela mudou para seleção de conta")
-                            return preencher_formulario(driver, actions, row, index, df, tentativa + 1)
-                        except TimeoutException:
-                            print(f"[Linha {index}] ❌ Tela não mudou para seleção de conta")
-                            df.at[index, 'Observação'] = "Tela não mudou para seleção de conta"
-                            df.to_excel(EXCEL_PATH, index=False)
-                            return None
-                        
-                    except TimeoutException:
-                        print(f"[Linha {index}] ❌ Tela não mudou após clique em consultar")
-                        df.at[index, 'Observação'] = "Tela não avançou após clique"
+                    # Aguarda um momento para a consulta ser processada
+                    time.sleep(2)
+                    
+                    # Verifica se a pessoa foi encontrada
+                    if verificar_pessoa_nao_encontrada(driver, index):
+                        print(f"[Linha {index}] ❌ Pessoa não encontrada")
+                        df.at[index, 'Observação'] = "Pessoa não encontrada"
+                        df.to_excel(EXCEL_PATH, index=False)
+                        return None
+                    
+                    # Tenta clicar no botão Abrir
+                    if not clicar_botao_abrir(driver, index):
+                        print(f"[Linha {index}] ❌ Falha ao clicar no botão Abrir")
+                        df.at[index, 'Observação'] = "Falha ao clicar no botão Abrir"
+                        df.to_excel(EXCEL_PATH, index=False)
+                        return None
+                    
+                    # Aguarda um momento para a ação ser processada
+                    time.sleep(2)
+                    
+                    # Verifica se mudou para a tela de seleção de conta
+                    tela_atual = verificar_tela_atual(driver, index)
+                    if tela_atual == "selecao_conta":
+                        print(f"[Linha {index}] ✅ Tela mudou para seleção de conta")
+                        return preencher_formulario(driver, actions, row, index, df, tentativa + 1)
+                    else:
+                        print(f"[Linha {index}] ❌ Tela não mudou para seleção de conta após clicar em Abrir")
+                        df.at[index, 'Observação'] = "Tela não mudou para seleção de conta após clicar em Abrir"
                         df.to_excel(EXCEL_PATH, index=False)
                         return None
                 else:
