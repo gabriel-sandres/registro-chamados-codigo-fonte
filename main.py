@@ -562,14 +562,24 @@ def esperar_spinner_desaparecer(driver, index, timeout=30, check_interval=1):
 def clicar_botao_consulta(driver, index):
     try:
         print(f"[Linha {index}] Tentando clicar no botão consultar...")
-        botao_xpath = '/html/body/div/sc-app/sc-template/sc-root/main/section/sc-content/sc-consult/div/div[2]/div/sc-card-content/div/main/form/div/div[3]/sc-button/button'
+        botao_xpath = '/html/body/div[1]/sc-app/sc-template/sc-root/main/section/sc-content/sc-consult/div/div[2]/div/sc-card-content/div/main/form/div/div[3]/sc-button/button'
         
         # Espera o botão estar presente e clicável
         try:
             botao = WebDriverWait(driver, 30).until(
-                EC.element_to_be_clickable((By.XPATH, botao_xpath))
+                EC.presence_of_element_located((By.XPATH, botao_xpath))
             )
             print(f"[Linha {index}] ✅ Botão consultar encontrado")
+            
+            # Verifica se o botão está desabilitado
+            if botao.get_attribute("disabled"):
+                print(f"[Linha {index}] ⚠️ Botão está desabilitado, aguardando habilitação...")
+                # Aguarda até que o botão seja habilitado
+                WebDriverWait(driver, 10).until(
+                    lambda d: not d.find_element(By.XPATH, botao_xpath).get_attribute("disabled")
+                )
+                print(f"[Linha {index}] ✅ Botão foi habilitado")
+            
         except TimeoutException:
             print(f"[Linha {index}] ❌ Timeout ao localizar botão consultar")
             return False
@@ -586,39 +596,34 @@ def clicar_botao_consulta(driver, index):
             try:
                 print(f"[Linha {index}] Tentativa {tentativas + 1} de clicar no botão...")
                 
-                # Tenta clicar normalmente
+                # Tenta clicar via JavaScript primeiro (mais confiável neste caso)
                 try:
-                    botao.click()
-                    print(f"[Linha {index}] ✅ Botão clicado com sucesso")
-                    return True
-                except ElementClickInterceptedException:
-                    print(f"[Linha {index}] ⚠️ Clique interceptado, tentando via JavaScript...")
-                
-                # Tenta clicar via JavaScript
-                try:
+                    driver.execute_script("arguments[0].scrollIntoView(true);", botao)
                     driver.execute_script("arguments[0].click();", botao)
+                    time.sleep(2)  # Aguarda efeito do clique
                     print(f"[Linha {index}] ✅ Botão clicado via JavaScript")
                     return True
                 except Exception as e:
                     print(f"[Linha {index}] ⚠️ Falha ao clicar via JavaScript: {str(e)}")
                 
+                # Tenta clicar normalmente
+                try:
+                    botao.click()
+                    time.sleep(2)  # Aguarda efeito do clique
+                    print(f"[Linha {index}] ✅ Botão clicado com sucesso")
+                    return True
+                except ElementClickInterceptedException:
+                    print(f"[Linha {index}] ⚠️ Clique interceptado, tentando via ActionChains...")
+                
                 # Tenta clicar via ActionChains
                 try:
                     actions = ActionChains(driver)
                     actions.move_to_element(botao).click().perform()
+                    time.sleep(2)  # Aguarda efeito do clique
                     print(f"[Linha {index}] ✅ Botão clicado via ActionChains")
                     return True
                 except Exception as e:
                     print(f"[Linha {index}] ⚠️ Falha ao clicar via ActionChains: {str(e)}")
-
-                try:
-                    driver.execute_script("arguments[0].scrollIntoView(true);", botao)
-                    driver.execute_script("arguments[0].click();", botao)
-                    time.sleep(2)  # Aguarda efeito do clique
-                    return True
-                except Exception as e:
-                    print(f"[Linha {index}] ❌ Falha no clique via JS: {str(e)}")
-
                 
                 # Se chegou aqui, nenhum método funcionou
                 tentativas += 1
