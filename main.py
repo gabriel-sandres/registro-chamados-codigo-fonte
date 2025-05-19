@@ -612,7 +612,7 @@ def verificar_tela_atual(driver, index):
 
 def preencher_formulario(driver, actions, row, index, df: pd.DataFrame, tentativa=0, max_tentativas_por_tela=3):
     try:
-        if tentativa >= max_tentativas_por_tela:  # Limita o número de tentativas por tela
+        if tentativa >= max_tentativas_por_tela:
             print(f"[Linha {index}] ❌ Número máximo de tentativas excedido para esta tela")
             df.at[index, 'Observação'] = "Número máximo de tentativas excedido para esta tela"
             df.to_excel(EXCEL_PATH, index=False)
@@ -638,51 +638,77 @@ def preencher_formulario(driver, actions, row, index, df: pd.DataFrame, tentativ
             print(f"[Linha {index}] Está na tela de consulta. Preenchendo documento...")
             campo_documento_xpath = '/html/body/div/sc-app/sc-template/sc-root/main/section/sc-content/sc-consult/div/div[2]/div/sc-card-content/div/main/form/div/div[2]/sc-form-field/div/input'
             try:
+                # Espera o campo estar presente e clicável
                 campo_documento = WebDriverWait(driver, 30).until(
-                    EC.presence_of_element_located((By.XPATH, campo_documento_xpath))
+                    EC.element_to_be_clickable((By.XPATH, campo_documento_xpath))
                 )
+                
+                # Rola até o elemento
                 driver.execute_script("arguments[0].scrollIntoView(true);", campo_documento)
                 time.sleep(1)
+                
+                # Limpa o campo
                 campo_documento.clear()
+                time.sleep(0.5)
+                
+                # Clica no campo
                 campo_documento.click()
-
+                time.sleep(0.5)
+                
+                # Obtém o documento
                 doc_original = str(row['Documento do cooperado']).strip()
                 numeros = ''.join(filter(str.isdigit, doc_original))
                 print(f"[Linha {index}] Preenchendo documento: {numeros}")
-
+                
+                # Preenche o documento caractere por caractere
                 for digito in numeros:
                     campo_documento.send_keys(digito)
                     time.sleep(0.1)
-
+                
+                # Aguarda um momento para garantir que o valor foi preenchido
+                time.sleep(1)
+                
+                # Verifica se o valor foi preenchido corretamente
                 valor_preenchido = campo_documento.get_attribute('value')
+                print(f"[Linha {index}] Valor preenchido no campo: {valor_preenchido}")
+                
+                if not valor_preenchido:
+                    print(f"[Linha {index}] ⚠️ Campo está vazio após preenchimento")
+                    # Tenta preencher novamente usando JavaScript
+                    driver.execute_script(f"arguments[0].value = '{numeros}';", campo_documento)
+                    time.sleep(1)
+                    valor_preenchido = campo_documento.get_attribute('value')
+                    print(f"[Linha {index}] Valor após tentativa JavaScript: {valor_preenchido}")
+                
                 if valor_preenchido and numeros in valor_preenchido:
                     print(f"[Linha {index}] ✅ Documento preenchido com sucesso: {valor_preenchido}")
+                    
+                    # Tenta clicar no botão consultar
+                    if not clicar_botao_consulta(driver, index):
+                        df.at[index, 'Observação'] = "Falha ao clicar no botão consultar"
+                        df.to_excel(EXCEL_PATH, index=False)
+                        return None
+                    
+                    # Aguarda a mudança de tela
+                    try:
+                        WebDriverWait(driver, 10).until(
+                            lambda d: verificar_tela_atual(d, index) != "consulta"
+                        )
+                        print(f"[Linha {index}] ✅ Tela mudou após clique em consultar")
+                        return preencher_formulario(driver, actions, row, index, df, tentativa + 1)
+                    except TimeoutException:
+                        print(f"[Linha {index}] ❌ Tela não mudou após clique em consultar")
+                        df.at[index, 'Observação'] = "Tela não avançou após clique"
+                        df.to_excel(EXCEL_PATH, index=False)
+                        return None
                 else:
-                    print(f"[Linha {index}] ❌ Documento não preenchido corretamente")
+                    print(f"[Linha {index}] ❌ Documento não preenchido corretamente. Valor esperado: {numeros}, Valor obtido: {valor_preenchido}")
                     df.at[index, 'Observação'] = "Falha ao preencher documento"
                     df.to_excel(EXCEL_PATH, index=False)
                     return None
-
-                if not clicar_botao_consulta(driver, index):
-                    df.at[index, 'Observação'] = "Falha ao clicar no botão consultar"
-                    df.to_excel(EXCEL_PATH, index=False)
-                    return None
-
-                try:
-                    WebDriverWait(driver, 10).until(
-                        lambda d: verificar_tela_atual(d, index) != "consulta"
-                    )
-                    print(f"[Linha {index}] ✅ Tela mudou após clique em consultar")
-                except TimeoutException:
-                    print(f"[Linha {index}] ❌ Tela não mudou após clique em consultar")
-                    df.at[index, 'Observação'] = "Tela não avançou após clique"
-                    df.to_excel(EXCEL_PATH, index=False)
-                    return None
-
-                return preencher_formulario(driver, actions, row, index, df, tentativa + 1)
-
+                
             except Exception as e:
-                print(f"[Linha {index}] ❌ Erro ao preencher documento: {e}")
+                print(f"[Linha {index}] ❌ Erro ao preencher documento: {str(e)}")
                 df.at[index, 'Observação'] = f"Erro ao preencher documento: {str(e)}"
                 df.to_excel(EXCEL_PATH, index=False)
                 return None
@@ -692,8 +718,9 @@ def preencher_formulario(driver, actions, row, index, df: pd.DataFrame, tentativ
             time.sleep(2)
             esperar_spinner_desaparecer(driver, index)
             return preencher_formulario(driver, actions, row, index, df, tentativa + 1)
+            
     except Exception as e:
-        print(f"[Linha {index}] ❌ Erro ao preencher formulário: {e}")
+        print(f"[Linha {index}] ❌ Erro ao preencher formulário: {str(e)}")
         df.at[index, 'Observação'] = f"Erro ao preencher formulário: {str(e)}"
         df.to_excel(EXCEL_PATH, index=False)
         return None
