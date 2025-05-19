@@ -735,13 +735,14 @@ def preencher_formulario(driver, actions, row, index, df: pd.DataFrame, tentativ
                 campo_documento.click()
                 time.sleep(0.5)
                 
-                # Obtém o documento
+                # Obtém o documento e formata
                 doc_original = str(row['Documento do cooperado']).strip()
                 numeros = ''.join(filter(str.isdigit, doc_original))
-                print(f"[Linha {index}] Preenchendo documento: {numeros}")
+                doc_formatado = formatar_documento(numeros)
+                print(f"[Linha {index}] Preenchendo documento: {doc_formatado}")
                 
                 # Preenche o documento caractere por caractere
-                for digito in numeros:
+                for digito in doc_formatado:
                     campo_documento.send_keys(digito)
                     time.sleep(0.1)
                 
@@ -755,12 +756,14 @@ def preencher_formulario(driver, actions, row, index, df: pd.DataFrame, tentativ
                 if not valor_preenchido:
                     print(f"[Linha {index}] ⚠️ Campo está vazio após preenchimento")
                     # Tenta preencher novamente usando JavaScript
-                    driver.execute_script(f"arguments[0].value = '{numeros}';", campo_documento)
+                    driver.execute_script(f"arguments[0].value = '{doc_formatado}';", campo_documento)
                     time.sleep(1)
                     valor_preenchido = campo_documento.get_attribute('value')
                     print(f"[Linha {index}] Valor após tentativa JavaScript: {valor_preenchido}")
                 
-                if valor_preenchido and numeros in valor_preenchido:
+                # Verifica se o valor foi preenchido corretamente (ignorando formatação)
+                valor_preenchido_numeros = ''.join(filter(str.isdigit, valor_preenchido))
+                if valor_preenchido_numeros == numeros:
                     print(f"[Linha {index}] ✅ Documento preenchido com sucesso: {valor_preenchido}")
                     
                     # Tenta clicar no botão consultar
@@ -779,7 +782,6 @@ def preencher_formulario(driver, actions, row, index, df: pd.DataFrame, tentativ
                                 verificar_tela_atual(d, index) != "consulta"
                             )
                         )
-
                         print(f"[Linha {index}] ✅ Tela mudou após clique em consultar")
                         return preencher_formulario(driver, actions, row, index, df, tentativa + 1)
                     except TimeoutException:
@@ -788,7 +790,7 @@ def preencher_formulario(driver, actions, row, index, df: pd.DataFrame, tentativ
                         df.to_excel(EXCEL_PATH, index=False)
                         return None
                 else:
-                    print(f"[Linha {index}] ❌ Documento não preenchido corretamente. Valor esperado: {numeros}, Valor obtido: {valor_preenchido}")
+                    print(f"[Linha {index}] ❌ Documento não preenchido corretamente. Valor esperado: {numeros}, Valor obtido: {valor_preenchido_numeros}")
                     df.at[index, 'Observação'] = "Falha ao preencher documento"
                     df.to_excel(EXCEL_PATH, index=False)
                     return None
