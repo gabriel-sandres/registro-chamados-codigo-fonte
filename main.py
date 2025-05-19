@@ -132,31 +132,84 @@ def load_excel_data(file_path: str) -> pd.DataFrame:
     )
     return df
 
-def login(driver: webdriver.Chrome, username: str, password: str):
-    try:
-        logger.info("🔄 Iniciando processo de login...")
-        driver.get(BASE_URL)
-        
-        logger.info("Preenchendo credenciais...")
-        WebDriverWait(driver, 30).until(EC.visibility_of_element_located((By.ID, 'username'))).send_keys(username)
-        WebDriverWait(driver, 30).until(EC.visibility_of_element_located((By.ID, 'password'))).send_keys(password)
-        
-        logger.info("Clicando no botão de login...")
-        WebDriverWait(driver, 30).until(EC.element_to_be_clickable((By.ID, 'kc-login'))).click()
-        
-        logger.info("Aguardando QR code desaparecer...")
-        WebDriverWait(driver, 300).until(EC.invisibility_of_element_located((By.ID, "qr-code")))
-        logger.info("✅ Login realizado com sucesso!")
-        
-    except TimeoutException as e:
-        log_error(e, "processo de login")
-        raise LoginError(f"Timeout durante o login: {str(e)}")
-    except NoSuchElementException as e:
-        log_error(e, "processo de login")
-        raise LoginError(f"Elemento não encontrado durante o login: {str(e)}")
-    except Exception as e:
-        log_error(e, "processo de login")
-        raise LoginError(f"Falha no login: {str(e)}")
+def login(driver: webdriver.Chrome, username: str, password: str, max_tentativas=3):
+    for tentativa in range(max_tentativas):
+        try:
+            logger.info(f"🔄 Iniciando processo de login... (Tentativa {tentativa + 1}/{max_tentativas})")
+            driver.get(BASE_URL)
+            
+            # Espera a página carregar completamente
+            WebDriverWait(driver, 30).until(
+                EC.presence_of_element_located((By.TAG_NAME, "body"))
+            )
+            
+            # Verifica se já está logado
+            try:
+                if driver.find_element(By.ID, "username").is_displayed():
+                    logger.info("Preenchendo credenciais...")
+                    campo_username = WebDriverWait(driver, 30).until(
+                        EC.visibility_of_element_located((By.ID, 'username'))
+                    )
+                    campo_username.clear()
+                    campo_username.send_keys(username)
+                    
+                    campo_password = WebDriverWait(driver, 30).until(
+                        EC.visibility_of_element_located((By.ID, 'password'))
+                    )
+                    campo_password.clear()
+                    campo_password.send_keys(password)
+                    
+                    logger.info("Clicando no botão de login...")
+                    botao_login = WebDriverWait(driver, 30).until(
+                        EC.element_to_be_clickable((By.ID, 'kc-login'))
+                    )
+                    botao_login.click()
+                else:
+                    logger.info("Já está logado!")
+                    return True
+            except NoSuchElementException:
+                logger.info("Já está logado!")
+                return True
+            
+            # Aguarda o QR code desaparecer
+            try:
+                logger.info("Aguardando QR code desaparecer...")
+                WebDriverWait(driver, 300).until(
+                    EC.invisibility_of_element_located((By.ID, "qr-code"))
+                )
+                logger.info("✅ Login realizado com sucesso!")
+                return True
+            except TimeoutException:
+                logger.warning("QR code não desapareceu a tempo")
+                if tentativa < max_tentativas - 1:
+                    logger.info("Tentando novamente...")
+                    continue
+                else:
+                    raise LoginError("QR code não desapareceu após várias tentativas")
+            
+        except TimeoutException as e:
+            logger.error(f"Timeout durante o login: {str(e)}")
+            if tentativa < max_tentativas - 1:
+                logger.info("Tentando novamente...")
+                continue
+            else:
+                raise LoginError(f"Timeout durante o login após {max_tentativas} tentativas: {str(e)}")
+        except NoSuchElementException as e:
+            logger.error(f"Elemento não encontrado durante o login: {str(e)}")
+            if tentativa < max_tentativas - 1:
+                logger.info("Tentando novamente...")
+                continue
+            else:
+                raise LoginError(f"Elemento não encontrado durante o login após {max_tentativas} tentativas: {str(e)}")
+        except Exception as e:
+            logger.error(f"Erro inesperado durante o login: {str(e)}")
+            if tentativa < max_tentativas - 1:
+                logger.info("Tentando novamente...")
+                continue
+            else:
+                raise LoginError(f"Falha no login após {max_tentativas} tentativas: {str(e)}")
+    
+    raise LoginError(f"Falha no login após {max_tentativas} tentativas")
 
 def limpar_e_preencher(campo, valor):
     campo.click()
@@ -312,12 +365,18 @@ def selecionar_conta_por_cooperativa(driver, cooperativa, index):
         select_xpath = '/html/body/div[1]/sc-app/sc-template/sc-root/main/aside/sc-sidebar-container/aside/sc-sidebar/div[2]/div[1]/div/form/div/select'
         
         # Espera o spinner desaparecer antes de tentar selecionar a conta
-        esperar_spinner_desaparecer(driver, index)
+        if not esperar_spinner_desaparecer(driver, index):
+            print(f"[Linha {index}] ⚠️ Spinner não desapareceu a tempo")
+            return False
         
         # Espera o select estar presente e clicável
-        select_element = WebDriverWait(driver, 30).until(
-            EC.element_to_be_clickable((By.XPATH, select_xpath))
-        )
+        try:
+            select_element = WebDriverWait(driver, 30).until(
+                EC.element_to_be_clickable((By.XPATH, select_xpath))
+            )
+        except TimeoutException:
+            print(f"[Linha {index}] ⚠️ Timeout ao aguardar select de conta")
+            return False
         
         # Rola até o elemento para garantir que está visível
         driver.execute_script("arguments[0].scrollIntoView(true);", select_element)
@@ -326,31 +385,42 @@ def selecionar_conta_por_cooperativa(driver, cooperativa, index):
         # Tenta clicar no select primeiro
         try:
             select_element.click()
-        except:
-            actions = ActionChains(driver)
-            actions.move_to_element(select_element).click().perform()
+        except ElementClickInterceptedException:
+            try:
+                driver.execute_script("arguments[0].click();", select_element)
+            except:
+                actions = ActionChains(driver)
+                actions.move_to_element(select_element).click().perform()
         
         # Espera as opções aparecerem
         time.sleep(1)
         
-        options = select_element.find_elements(By.TAG_NAME, 'option')
+        try:
+            options = select_element.find_elements(By.TAG_NAME, 'option')
+        except NoSuchElementException:
+            print(f"[Linha {index}] ⚠️ Não foi possível encontrar as opções do select")
+            return False
         
         conta_encontrada = False
         for option in options:
-            texto_opcao = option.text.strip()
-            # Verifica se o texto da opção contém a cooperativa
-            if f"Coop: {cooperativa}" in texto_opcao:
-                print(f"[Linha {index}] Conta encontrada: {texto_opcao}")
-                try:
-                    option.click()
-                except:
+            try:
+                texto_opcao = option.text.strip()
+                # Verifica se o texto da opção contém a cooperativa
+                if f"Coop: {cooperativa}" in texto_opcao:
+                    print(f"[Linha {index}] Conta encontrada: {texto_opcao}")
                     try:
-                        driver.execute_script("arguments[0].click();", option)
-                    except:
-                        actions = ActionChains(driver)
-                        actions.move_to_element(option).click().perform()
-                conta_encontrada = True
-                break
+                        option.click()
+                    except ElementClickInterceptedException:
+                        try:
+                            driver.execute_script("arguments[0].click();", option)
+                        except:
+                            actions = ActionChains(driver)
+                            actions.move_to_element(option).click().perform()
+                    conta_encontrada = True
+                    break
+            except Exception as e:
+                print(f"[Linha {index}] ⚠️ Erro ao processar opção: {str(e)}")
+                continue
         
         if not conta_encontrada:
             print(f"[Linha {index}] ⚠️ ATENÇÃO: Nenhuma conta encontrada para cooperativa {cooperativa}")
@@ -372,7 +442,9 @@ def selecionar_conta_por_cooperativa(driver, cooperativa, index):
             return False
             
         # Espera o spinner desaparecer após a seleção
-        esperar_spinner_desaparecer(driver, index)
+        if not esperar_spinner_desaparecer(driver, index):
+            print(f"[Linha {index}] ⚠️ Spinner não desapareceu após seleção da conta")
+            return False
         
         # Aguarda a tela mudar para a tela de formulário
         try:
@@ -386,14 +458,8 @@ def selecionar_conta_por_cooperativa(driver, cooperativa, index):
             print(f"[Linha {index}] ⚠️ Timeout ao aguardar tela de formulário")
             return False
             
-    except TimeoutException as e:
-        print(f"[Linha {index}] Timeout ao selecionar conta: {e}")
-        return False
-    except NoSuchElementException as e:
-        print(f"[Linha {index}] Select de conta não encontrado: {e}")
-        return False
     except Exception as e:
-        print(f"[Linha {index}] Erro ao selecionar conta: {e}")
+        print(f"[Linha {index}] ❌ Erro ao selecionar conta: {str(e)}")
         return False
 
 def verificar_pessoa_nao_encontrada(driver, index):
@@ -434,18 +500,30 @@ def esperar_modal_desaparecer(driver, index, timeout=10):
         logger.warning(f"[Linha {index}] Modal ainda presente após {timeout} segundos")
         return False
 
-def esperar_spinner_desaparecer(driver, index, timeout=30):
+def esperar_spinner_desaparecer(driver, index, timeout=30, check_interval=1):
     try:
         spinner_xpath = "//div[contains(@class, 'ngx-spinner-overlay')]"
-        WebDriverWait(driver, timeout).until(
-            EC.invisibility_of_element_located((By.XPATH, spinner_xpath))
-        )
-        return True
-    except TimeoutException:
-        print(f"[Linha {index}] Timeout ao esperar spinner desaparecer")
+        start_time = time.time()
+        
+        while time.time() - start_time < timeout:
+            try:
+                spinner = driver.find_element(By.XPATH, spinner_xpath)
+                if not spinner.is_displayed():
+                    print(f"[Linha {index}] ✅ Spinner desapareceu")
+                    return True
+            except NoSuchElementException:
+                print(f"[Linha {index}] ✅ Spinner não encontrado")
+                return True
+            except Exception as e:
+                print(f"[Linha {index}] ⚠️ Erro ao verificar spinner: {str(e)}")
+            
+            time.sleep(check_interval)
+        
+        print(f"[Linha {index}] ⚠️ Timeout ao esperar spinner desaparecer após {timeout} segundos")
         return False
+        
     except Exception as e:
-        print(f"[Linha {index}] Erro ao esperar spinner desaparecer: {e}")
+        print(f"[Linha {index}] ❌ Erro ao esperar spinner desaparecer: {str(e)}")
         return False
 
 def clicar_botao_consulta(driver, index):
@@ -532,11 +610,11 @@ def verificar_tela_atual(driver, index):
         print(f"[Linha {index}] Erro ao verificar tela atual: {e}")
         return "desconhecida"
 
-def preencher_formulario(driver, actions, row, index, df: pd.DataFrame, tentativa=0):
+def preencher_formulario(driver, actions, row, index, df: pd.DataFrame, tentativa=0, max_tentativas_por_tela=3):
     try:
-        if tentativa >= 3:  # Limita o número de tentativas
-            print(f"[Linha {index}] ❌ Número máximo de tentativas excedido")
-            df.at[index, 'Observação'] = "Número máximo de tentativas excedido"
+        if tentativa >= max_tentativas_por_tela:  # Limita o número de tentativas por tela
+            print(f"[Linha {index}] ❌ Número máximo de tentativas excedido para esta tela")
+            df.at[index, 'Observação'] = "Número máximo de tentativas excedido para esta tela"
             df.to_excel(EXCEL_PATH, index=False)
             return None
 
@@ -558,294 +636,67 @@ def preencher_formulario(driver, actions, row, index, df: pd.DataFrame, tentativ
                 return None
         elif tela_atual == "consulta":
             print(f"[Linha {index}] Está na tela de consulta. Preenchendo documento...")
+            campo_documento_xpath = '/html/body/div/sc-app/sc-template/sc-root/main/section/sc-content/sc-consult/div/div[2]/div/sc-card-content/div/main/form/div/div[2]/sc-form-field/div/input'
+            try:
+                campo_documento = WebDriverWait(driver, 30).until(
+                    EC.presence_of_element_located((By.XPATH, campo_documento_xpath))
+                )
+                driver.execute_script("arguments[0].scrollIntoView(true);", campo_documento)
+                time.sleep(1)
+                campo_documento.clear()
+                campo_documento.click()
 
-    campo_documento_xpath = '/html/body/div/sc-app/sc-template/sc-root/main/section/sc-content/sc-consult/div/div[2]/div/sc-card-content/div/main/form/div/div[2]/sc-form-field/div/input'
-    try:
-        campo_documento = WebDriverWait(driver, 30).until(
-            EC.presence_of_element_located((By.XPATH, campo_documento_xpath))
-        )
-        driver.execute_script("arguments[0].scrollIntoView(true);", campo_documento)
-        time.sleep(1)
-        campo_documento.clear()
-        campo_documento.click()
+                doc_original = str(row['Documento do cooperado']).strip()
+                numeros = ''.join(filter(str.isdigit, doc_original))
+                print(f"[Linha {index}] Preenchendo documento: {numeros}")
 
-        doc_original = str(row['Documento do cooperado']).strip()
-        numeros = ''.join(filter(str.isdigit, doc_original))
-        print(f"[Linha {index}] Preenchendo documento: {numeros}")
+                for digito in numeros:
+                    campo_documento.send_keys(digito)
+                    time.sleep(0.1)
 
-        for digito in numeros:
-            campo_documento.send_keys(digito)
-            time.sleep(0.1)
+                valor_preenchido = campo_documento.get_attribute('value')
+                if valor_preenchido and numeros in valor_preenchido:
+                    print(f"[Linha {index}] ✅ Documento preenchido com sucesso: {valor_preenchido}")
+                else:
+                    print(f"[Linha {index}] ❌ Documento não preenchido corretamente")
+                    df.at[index, 'Observação'] = "Falha ao preencher documento"
+                    df.to_excel(EXCEL_PATH, index=False)
+                    return None
 
-        valor_preenchido = campo_documento.get_attribute('value')
-        if valor_preenchido and numeros in valor_preenchido:
-            print(f"[Linha {index}] ✅ Documento preenchido com sucesso: {valor_preenchido}")
-        else:
-            print(f"[Linha {index}] ❌ Documento não preenchido corretamente")
-            df.at[index, 'Observação'] = "Falha ao preencher documento"
-            df.to_excel(EXCEL_PATH, index=False)
-            return None
+                if not clicar_botao_consulta(driver, index):
+                    df.at[index, 'Observação'] = "Falha ao clicar no botão consultar"
+                    df.to_excel(EXCEL_PATH, index=False)
+                    return None
 
-        if not clicar_botao_consulta(driver, index):
-            df.at[index, 'Observação'] = "Falha ao clicar no botão consultar"
-            df.to_excel(EXCEL_PATH, index=False)
-            return None
+                try:
+                    WebDriverWait(driver, 10).until(
+                        lambda d: verificar_tela_atual(d, index) != "consulta"
+                    )
+                    print(f"[Linha {index}] ✅ Tela mudou após clique em consultar")
+                except TimeoutException:
+                    print(f"[Linha {index}] ❌ Tela não mudou após clique em consultar")
+                    df.at[index, 'Observação'] = "Tela não avançou após clique"
+                    df.to_excel(EXCEL_PATH, index=False)
+                    return None
 
-        try:
-            WebDriverWait(driver, 10).until(
-                lambda d: verificar_tela_atual(d, index) != "consulta"
-            )
-            print(f"[Linha {index}] ✅ Tela mudou após clique em consultar")
-        except TimeoutException:
-            print(f"[Linha {index}] ❌ Tela não mudou após clique em consultar")
-            df.at[index, 'Observação'] = "Tela não avançou após clique"
-            df.to_excel(EXCEL_PATH, index=False)
-            return None
+                return preencher_formulario(driver, actions, row, index, df, tentativa + 1)
 
-        return preencher_formulario(driver, actions, row, index, df, tentativa + 1)
-
-    except Exception as e:
-        print(f"[Linha {index}] ❌ Erro ao preencher documento: {e}")
-        df.at[index, 'Observação'] = f"Erro ao preencher documento: {str(e)}"
-        df.to_excel(EXCEL_PATH, index=False)
-        return None
-            
-            # Clica no botão consultar
-            if not clicar_botao_consulta(driver, index):
-                df.at[index, 'Observação'] = "Falha ao clicar no botão consultar"
+            except Exception as e:
+                print(f"[Linha {index}] ❌ Erro ao preencher documento: {e}")
+                df.at[index, 'Observação'] = f"Erro ao preencher documento: {str(e)}"
                 df.to_excel(EXCEL_PATH, index=False)
                 return None
-                
-            # Aguarda a tela mudar
-            time.sleep(2)
-            return preencher_formulario(driver, actions, row, index, df, tentativa + 1)
         else:
             print(f"[Linha {index}] ⚠️ Tela desconhecida. Tentando voltar...")
             driver.get(BASE_URL)
             time.sleep(2)
             esperar_spinner_desaparecer(driver, index)
             return preencher_formulario(driver, actions, row, index, df, tentativa + 1)
-        
-        # Verifica se está realmente na tela de formulário
-        try:
-            WebDriverWait(driver, 10).until(
-                EC.presence_of_element_located((By.XPATH, "//form"))
-            )
-        except TimeoutException:
-            print(f"[Linha {index}] ⚠️ Não foi possível confirmar tela de formulário")
-            df.at[index, 'Observação'] = "Falha ao carregar formulário"
-            df.to_excel(EXCEL_PATH, index=False)
-            return None
-
-        required_fields = ['Documento do cooperado', 'Protocolo PLAD', 'Categoria', 'Serviço', 'Cooperativa']
-        for field in required_fields:
-            if pd.isna(row[field]) or not str(row[field]).strip():
-                error_msg = f"Campo '{field}' inválido ou ausente"
-                logger.error(f"[Linha {index}] {error_msg}")
-                df.at[index, 'Observação'] = error_msg
-                df.to_excel(EXCEL_PATH, index=False)
-                return None
-
-        doc_original = str(row['Documento do cooperado']).strip()
-        doc_formatado = formatar_documento(doc_original)
-        logger.info(f"[Linha {index}] Documento original: {doc_original}")
-        logger.info(f"[Linha {index}] Documento formatado: {doc_formatado}")
-        
-        protocolo_plad = str(row['Protocolo PLAD']).strip()
-        categoria = str(row['Categoria']).strip()
-        servico = normalizar_servico(str(row['Serviço']).strip())
-        cooperativa = str(row['Cooperativa']).strip()
-        
-        MENSAGEM_PADRAO = "Registro de atendimento realizado na Plataforma de Atendimento Digital via automação"
-        
-        observacao = str(row.get('Observação', '')).strip()
-        if (pd.isna(row.get('Observação')) or 
-            observacao.lower() == 'nan' or 
-            not observacao or 
-            len(observacao) < 10):
-            descricao = MENSAGEM_PADRAO
-            if observacao and len(observacao) < 10:
-                print(f"[Linha {index}] Observação '{observacao}' tem menos de 10 caracteres. Usando mensagem padrão.")
-        else:
-            descricao = observacao
-
-        print(f"[Linha {index}] Aguardando campo de documento...")
-        campo_documento_xpath = '/html/body/div/sc-app/sc-template/sc-root/main/section/sc-content/sc-consult/div/div[2]/div/sc-card-content/div/main/form/div/div[2]/sc-form-field/div/input'
-        
-        # Tenta encontrar o campo de documento com retry
-        max_tentativas = 3
-        for tentativa in range(max_tentativas):
-            try:
-                campo_documento = WebDriverWait(driver, 30).until(
-                    EC.presence_of_element_located((By.XPATH, campo_documento_xpath))
-                )
-                print(f"[Linha {index}] Campo de documento encontrado")
-                break
-            except TimeoutException:
-                if tentativa < max_tentativas - 1:
-                    print(f"[Linha {index}] Tentativa {tentativa + 1} de encontrar campo de documento falhou, tentando novamente...")
-                    driver.refresh()
-                    time.sleep(2)
-                    esperar_spinner_desaparecer(driver, index)
-                else:
-                    raise
-
-        campo_documento.clear()
-        numeros = ''.join(filter(str.isdigit, doc_original))
-        for digito in numeros:
-            campo_documento.send_keys(digito)
-        campo_documento.send_keys(Keys.TAB)
-
-        print(f"[Linha {index}] Documento preenchido: {doc_formatado}")
-
-        print(f"[Linha {index}] Aguardando botão de consulta...")
-        if not clicar_botao_consulta(driver, index):
-            df.at[index, 'Observação'] = "Falha ao clicar no botão consultar"
-            df.to_excel(EXCEL_PATH, index=False)
-            return None
-
-        if verificar_pessoa_nao_encontrada(driver, index):
-            df.at[index, 'Observação'] = "Pessoa não identificada como cooperada!"
-            df.to_excel(EXCEL_PATH, index=False)
-            print(f"[Linha {index}] ℹ️ Observação atualizada na planilha")
-            return None
-
-        print(f"[Linha {index}] Aguardando botão de seleção de conta...")
-        WebDriverWait(driver, 30).until(
-            EC.element_to_be_clickable((By.XPATH, '/html/body/div[1]/sc-app/sc-template/sc-root/main/section/sc-content/sc-consult/div/div[2]/div/sc-card-content/div/main/form/div/div[4]/sc-card/div/sc-card-content/div/div/div[2]/sc-button/button'))
-        ).click()
-        print(f"[Linha {index}] Botão de seleção de conta clicado")
-
-        if not selecionar_conta_por_cooperativa(driver, cooperativa, index):
-            print(f"[Linha {index}] Não foi possível continuar sem a conta correta")
-            df.at[index, 'Observação'] = "Conta não encontrada para a cooperativa"
-            df.to_excel(EXCEL_PATH, index=False)
-            return None
-
-        print(f"[Linha {index}] Aguardando botão de categoria...")
-        xpath_categoria = '/html/body/div[1]/sc-app/sc-template/sc-root/main/aside/sc-sidebar-container/aside/sc-sidebar/div[4]/div[1]/sc-card/div/div/div/div'
-        WebDriverWait(driver, 30).until(EC.element_to_be_clickable((By.XPATH, xpath_categoria)))
-        actions.move_to_element(driver.find_element(By.XPATH, xpath_categoria)).click().perform()
-        print(f"[Linha {index}] Botão de categoria clicado")
-
-        print(f"[Linha {index}] Aguardando botão de registro de chamado...")
-        registro_xpath = '/html/body/div[1]/sc-app/sc-register-ticket-button/div/div/div/button'
-        WebDriverWait(driver, 30).until(EC.element_to_be_clickable((By.XPATH, registro_xpath)))
-        actions.move_to_element(driver.find_element(By.XPATH, registro_xpath)).click().perform()
-        print(f"[Linha {index}] Botão de registro de chamado clicado")
-
-        # Aguardar o formulário estar completamente carregado
-        WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.XPATH, "//form"))
-        )
-        # Garantir que qualquer spinner tenha desaparecido
-        esperar_spinner_desaparecer(driver, index)
-
-        campos = {
-            'tipo': {
-                'xpath': '/html/body/div[3]/div[2]/div/sc-register-ticket/sc-actionbar/div/div/div[2]/form/div/div[3]/sc-form-field/div/input',
-                'valor': 'Chat Receptivo'
-            },
-            'categoria': {
-                'xpath': '/html/body/div[3]/div[2]/div/sc-register-ticket/sc-actionbar/div/div/div[2]/form/div/div[4]/sc-form-field/div/input',
-                'valor': categoria
-            },
-            'subcategoria': {
-                'xpath': '/html/body/div[3]/div[2]/div/sc-register-ticket/sc-actionbar/div/div/div[2]/form/div/div[5]/sc-form-field/div/input',
-                'valor': 'Api Sicoob'
-            },
-            'servico': {
-                'xpath': '/html/body/div[3]/div[2]/div/sc-register-ticket/sc-actionbar/div/div/div[2]/form/div/div[6]/sc-form-field/div/input',
-                'valor': servico
-            }
-        }
-
-        for campo_nome, campo_info in campos.items():
-            print(f"[Linha {index}] Preenchendo {campo_nome}...")
-            preencher_campo_com_js(driver, campo_info['xpath'], campo_info['valor'])
-            print(f"[Linha {index}] {campo_nome} preenchido com: {campo_info['valor']}")
-
-        print(f"[Linha {index}] Preenchendo Canal de autoatendimento...")
-        canal_autoatendimento_xpath = "//sc-form-field[div/label[contains(text(), 'Canal de autoatendimento')]]/div/select"
-        selecionar_opcao_select(driver, canal_autoatendimento_xpath, "Não se aplica")
-        print(f"[Linha {index}] Canal de autoatendimento selecionado")
-
-        print(f"[Linha {index}] Preenchendo Protocolo...")
-        protocolo_xpath = '/html/body/div[3]/div[2]/div/sc-register-ticket/sc-actionbar/div/div/div[2]/form/div/div[8]/sc-additional-service-data/form/div/div[2]/sc-form-field/div/input'
-        campo_protocolo = WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.XPATH, protocolo_xpath))
-        )
-        campo_protocolo.clear()
-        campo_protocolo.send_keys(protocolo_plad)
-        campo_protocolo.send_keys(Keys.TAB)
-        print(f"[Linha {index}] Protocolo preenchido: {protocolo_plad}")
-
-        print(f"[Linha {index}] Preenchendo Descrição...")
-        descricao_xpath = '/html/body/div[3]/div[2]/div/sc-register-ticket/sc-actionbar/div/div/div[2]/form/div/div[9]/sc-form-field/div/textarea'
-        try:
-            campo_descricao = WebDriverWait(driver, 20).until(
-                EC.presence_of_element_located((By.XPATH, descricao_xpath))
-            )
-            
-            driver.execute_script("arguments[0].scrollIntoView(true);", campo_descricao)
-            
-            campo_descricao.clear()
-            campo_descricao.send_keys(descricao)
-            print(f"[Linha {index}] Descrição preenchida: {descricao[:50]}..." if len(descricao) > 50 else f"[Linha {index}] Descrição preenchida: {descricao}")
-                
-        except TimeoutException as e:
-            print(f"[Linha {index}] Timeout ao encontrar campo de descrição: {str(e)}")
-            raise FormularioError(f"Timeout ao encontrar campo de descrição: {str(e)}")
-        except NoSuchElementException as e:
-            print(f"[Linha {index}] Campo de descrição não encontrado: {str(e)}")
-            raise FormularioError(f"Campo de descrição não encontrado: {str(e)}")
-        except Exception as e:
-            print(f"[Linha {index}] Erro ao encontrar campo de descrição: {str(e)}")
-            raise FormularioError(f"Erro ao encontrar campo de descrição: {str(e)}")
-
-        print(f"[Linha {index}] Aguardando botão Registrar ficar habilitado...")
-        registrar_xpath = '/html/body/div[3]/div[2]/div/sc-register-ticket/sc-actionbar/div/div/div[2]/form/div/div[20]/sc-button/button'
-        WebDriverWait(driver, 30).until(
-            lambda d: d.find_element(By.XPATH, registrar_xpath).is_enabled()
-        )
-        botao_registrar = driver.find_element(By.XPATH, registrar_xpath)
-        actions.move_to_element(botao_registrar).click().perform()
-        print(f"[Linha {index}] Botão Registrar clicado")
-
-        print(f"[Linha {index}] Aguardando botão Confirmar...")
-        confirmar_xpath = '/html/body/div[3]/div[4]/div/sc-register-ticket-modal/sc-modal/div/div/sc-modal-footer/div/div/div[2]/sc-button/button'
-        botao_confirmar = WebDriverWait(driver, 10).until(
-            EC.element_to_be_clickable((By.XPATH, confirmar_xpath))
-        )
-        actions.move_to_element(botao_confirmar).click().perform()
-        print(f"[Linha {index}] Botão Confirmar clicado")
-
-        print(f"[Linha {index}] Capturando número do protocolo...")
-        protocolo_xpath = '/html/body/div[3]/div[4]/div/sc-view-ticket-data/sc-actionbar/div/div/div[2]/form/div/div[2]/sc-card/div/sc-card-content/div/div/div[1]/h5'
-        elemento_protocolo = WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.XPATH, protocolo_xpath))
-        )
-        numero_protocolo = elemento_protocolo.text.strip()
-        logger.info(f"[Linha {index}] Protocolo capturado: {numero_protocolo}")
-
-        try:
-            df.at[index, 'Protocolo Visão'] = numero_protocolo
-            df.to_excel(EXCEL_PATH, index=False)
-            logger.info(f"[Linha {index}] Protocolo salvo na planilha com sucesso!")
-        except Exception as e:
-            logger.error(f"[Linha {index}] Erro ao salvar protocolo na planilha: {e}")
-        
-        return numero_protocolo
-
-    except TimeoutException as e:
-        log_error(e, "preencher formulário", index, df)
-        raise FormularioError(f"Timeout durante preenchimento do formulário: {str(e)}")
-    except NoSuchElementException as e:
-        log_error(e, "preencher formulário", index, df)
-        raise FormularioError(f"Elemento não encontrado durante preenchimento: {str(e)}")
     except Exception as e:
-        log_error(e, "preencher formulário", index, df)
-        raise FormularioError(f"Erro ao preencher formulário: {str(e)}")
+        print(f"[Linha {index}] ❌ Erro ao preencher formulário: {e}")
+        df.at[index, 'Observação'] = f"Erro ao preencher formulário: {str(e)}"
+        df.to_excel(EXCEL_PATH, index=False)
+        return None
 
 def tentar_preencher_formulario(driver, actions, row, index, df, max_tentativas=3):
     for tentativa in range(max_tentativas):
