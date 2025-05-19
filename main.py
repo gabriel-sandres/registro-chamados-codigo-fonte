@@ -143,10 +143,32 @@ def login(driver: webdriver.Chrome, username: str, password: str, max_tentativas
                 EC.presence_of_element_located((By.TAG_NAME, "body"))
             )
             
-            # Verifica se já está logado
+            # Verifica se está realmente logado
             try:
-                if driver.find_element(By.ID, "username").is_displayed():
-                    logger.info("Preenchendo credenciais...")
+                # Tenta encontrar elementos que só existem quando logado
+                elementos_logado = [
+                    "//sc-sidebar-container",  # Sidebar do sistema
+                    "//sc-app",  # Container principal do app
+                    "//sc-template"  # Template do sistema
+                ]
+                
+                for elemento in elementos_logado:
+                    try:
+                        WebDriverWait(driver, 5).until(
+                            EC.presence_of_element_located((By.XPATH, elemento))
+                        )
+                    except TimeoutException:
+                        raise NoSuchElementException(f"Elemento {elemento} não encontrado")
+                
+                # Se chegou aqui, está logado
+                logger.info("✅ Verificação de login bem-sucedida")
+                return True
+                
+            except NoSuchElementException:
+                logger.info("⚠️ Não está logado. Iniciando processo de login...")
+                
+                # Verifica se o campo de login está presente
+                try:
                     campo_username = WebDriverWait(driver, 30).until(
                         EC.visibility_of_element_located((By.ID, 'username'))
                     )
@@ -164,45 +186,56 @@ def login(driver: webdriver.Chrome, username: str, password: str, max_tentativas
                         EC.element_to_be_clickable((By.ID, 'kc-login'))
                     )
                     botao_login.click()
-                else:
-                    logger.info("Já está logado!")
-                    return True
-            except NoSuchElementException:
-                logger.info("Já está logado!")
-                return True
+                    
+                    # Aguarda o QR code desaparecer
+                    try:
+                        logger.info("Aguardando QR code desaparecer...")
+                        WebDriverWait(driver, 300).until(
+                            EC.invisibility_of_element_located((By.ID, "qr-code"))
+                        )
+                        
+                        # Verifica novamente se está logado
+                        time.sleep(5)  # Aguarda um pouco para garantir que a página carregou
+                        for elemento in elementos_logado:
+                            WebDriverWait(driver, 30).until(
+                                EC.presence_of_element_located((By.XPATH, elemento))
+                            )
+                        
+                        logger.info("✅ Login realizado com sucesso!")
+                        return True
+                        
+                    except TimeoutException:
+                        logger.warning("QR code não desapareceu a tempo")
+                        if tentativa < max_tentativas - 1:
+                            logger.info("Tentando novamente...")
+                            continue
+                        else:
+                            raise LoginError("QR code não desapareceu após várias tentativas")
+                            
+                except TimeoutException as e:
+                    logger.error(f"Timeout durante o login: {str(e)}")
+                    if tentativa < max_tentativas - 1:
+                        logger.info("Tentando novamente...")
+                        continue
+                    else:
+                        raise LoginError(f"Timeout durante o login após {max_tentativas} tentativas: {str(e)}")
+                except NoSuchElementException as e:
+                    logger.error(f"Elemento não encontrado durante o login: {str(e)}")
+                    if tentativa < max_tentativas - 1:
+                        logger.info("Tentando novamente...")
+                        continue
+                    else:
+                        raise LoginError(f"Elemento não encontrado durante o login após {max_tentativas} tentativas: {str(e)}")
+                except Exception as e:
+                    logger.error(f"Erro inesperado durante o login: {str(e)}")
+                    if tentativa < max_tentativas - 1:
+                        logger.info("Tentando novamente...")
+                        continue
+                    else:
+                        raise LoginError(f"Falha no login após {max_tentativas} tentativas: {str(e)}")
             
-            # Aguarda o QR code desaparecer
-            try:
-                logger.info("Aguardando QR code desaparecer...")
-                WebDriverWait(driver, 300).until(
-                    EC.invisibility_of_element_located((By.ID, "qr-code"))
-                )
-                logger.info("✅ Login realizado com sucesso!")
-                return True
-            except TimeoutException:
-                logger.warning("QR code não desapareceu a tempo")
-                if tentativa < max_tentativas - 1:
-                    logger.info("Tentando novamente...")
-                    continue
-                else:
-                    raise LoginError("QR code não desapareceu após várias tentativas")
-            
-        except TimeoutException as e:
-            logger.error(f"Timeout durante o login: {str(e)}")
-            if tentativa < max_tentativas - 1:
-                logger.info("Tentando novamente...")
-                continue
-            else:
-                raise LoginError(f"Timeout durante o login após {max_tentativas} tentativas: {str(e)}")
-        except NoSuchElementException as e:
-            logger.error(f"Elemento não encontrado durante o login: {str(e)}")
-            if tentativa < max_tentativas - 1:
-                logger.info("Tentando novamente...")
-                continue
-            else:
-                raise LoginError(f"Elemento não encontrado durante o login após {max_tentativas} tentativas: {str(e)}")
         except Exception as e:
-            logger.error(f"Erro inesperado durante o login: {str(e)}")
+            logger.error(f"Erro geral durante o login: {str(e)}")
             if tentativa < max_tentativas - 1:
                 logger.info("Tentando novamente...")
                 continue
