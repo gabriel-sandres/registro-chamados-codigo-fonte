@@ -807,6 +807,38 @@ def clicar_botao_abrir(driver, index):
         print(f"[Linha {index}] ❌ Erro ao tentar clicar no botão Abrir: {str(e)}")
         return False
 
+def clicar_menu_cobranca(driver, index):
+    try:
+        print(f"[Linha {index}] Tentando clicar no menu 'Cobrança'...")
+        cobranca_xpath = '/html/body/div[1]/sc-app/sc-template/sc-root/main/aside/sc-sidebar-container/aside/sc-sidebar/div[4]/div[10]'
+        menu_cobranca = WebDriverWait(driver, 20).until(
+            EC.element_to_be_clickable((By.XPATH, cobranca_xpath))
+        )
+        driver.execute_script("arguments[0].scrollIntoView(true);", menu_cobranca)
+        time.sleep(1)
+        menu_cobranca.click()
+        print(f"[Linha {index}] ✅ Menu 'Cobrança' clicado com sucesso")
+        return True
+    except Exception as e:
+        print(f"[Linha {index}] ❌ Erro ao clicar no menu 'Cobrança': {str(e)}")
+        return False
+
+def clicar_botao_registro_chamado(driver, index):
+    try:
+        print(f"[Linha {index}] Tentando clicar no botão de registro de chamado...")
+        botao_xpath = '/html/body/div[1]/sc-app/sc-register-ticket-button/div/div/div/button'
+        botao = WebDriverWait(driver, 20).until(
+            EC.element_to_be_clickable((By.XPATH, botao_xpath))
+        )
+        driver.execute_script("arguments[0].scrollIntoView(true);", botao)
+        time.sleep(1)
+        botao.click()
+        print(f"[Linha {index}] ✅ Botão de registro de chamado clicado com sucesso")
+        return True
+    except Exception as e:
+        print(f"[Linha {index}] ❌ Erro ao clicar no botão de registro de chamado: {str(e)}")
+        return False
+
 def preencher_formulario(driver, actions, row, index, df: pd.DataFrame, tentativa=0, max_tentativas_por_tela=3):
     try:
         if tentativa >= max_tentativas_por_tela:
@@ -856,6 +888,14 @@ def preencher_formulario(driver, actions, row, index, df: pd.DataFrame, tentativ
             print(f"[Linha {index}] ⚠️ Está na tela de seleção de conta. Tentando selecionar conta...")
             if not selecionar_conta_por_cooperativa(driver, row['Cooperativa'], index):
                 df.at[index, 'Observação'] = "Falha ao selecionar conta"
+                df.to_excel(EXCEL_PATH, index=False)
+                return None
+            if not clicar_menu_cobranca(driver, index):
+                df.at[index, 'Observação'] = "Falha ao clicar no menu Cobrança"
+                df.to_excel(EXCEL_PATH, index=False)
+                return None
+            if not clicar_botao_registro_chamado(driver, index):
+                df.at[index, 'Observação'] = "Falha ao clicar no botão de registro de chamado"
                 df.to_excel(EXCEL_PATH, index=False)
                 return None
             return preencher_formulario(driver, actions, row, index, df, tentativa + 1)
