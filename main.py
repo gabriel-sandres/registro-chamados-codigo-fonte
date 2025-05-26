@@ -982,23 +982,61 @@ def preencher_formulario(driver, actions, row, index, df: pd.DataFrame, tentativ
         
         if tela_atual == "consulta":
             print(f"[Linha {index}] Está na tela de consulta. Preenchendo documento...")
-            campo_documento_xpath = '/html/body/div/sc-app/sc-template/sc-root/main/section/sc-content/sc-consult/div/div[2]/div/sc-card-content/div/main/form/div/div[2]/sc-form-field/div/input'
+            
+            # Tenta diferentes XPaths para o campo de documento
+            campo_documento_xpaths = [
+                '/html/body/div/sc-app/sc-template/sc-root/main/section/sc-content/sc-consult/div/div[2]/div/sc-card-content/div/main/form/div/div[2]/sc-form-field/div/input',
+                '//input[@type="text" and @placeholder="Digite o documento"]',
+                '//input[contains(@placeholder, "documento")]',
+                '//sc-form-field//input[@type="text"]',
+                '//form//input[@type="text"]'
+            ]
+            
+            campo_documento = None
+            for xpath in campo_documento_xpaths:
+                try:
+                    print(f"[Linha {index}] Tentando localizar campo com XPath: {xpath}")
+                    campo_documento = WebDriverWait(driver, 5).until(
+                        EC.element_to_be_clickable((By.XPATH, xpath))
+                    )
+                    if campo_documento:
+                        print(f"[Linha {index}] ✅ Campo encontrado com XPath: {xpath}")
+                        break
+                except:
+                    continue
+            
+            if not campo_documento:
+                print(f"[Linha {index}] ❌ Não foi possível encontrar o campo de documento")
+                df.at[index, 'Observação'] = "Campo de documento não encontrado"
+                df.to_excel(EXCEL_PATH, index=False)
+                return None
+            
             try:
-                # Espera o campo estar presente e clicável
-                campo_documento = WebDriverWait(driver, 30).until(
-                    EC.element_to_be_clickable((By.XPATH, campo_documento_xpath))
-                )
-                
                 # Rola até o elemento
                 driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", campo_documento)
                 time.sleep(1)
                 
-                # Limpa o campo
-                campo_documento.clear()
+                # Tenta diferentes métodos para limpar o campo
+                try:
+                    campo_documento.clear()
+                except:
+                    try:
+                        campo_documento.send_keys(Keys.CONTROL + "a")
+                        campo_documento.send_keys(Keys.DELETE)
+                    except:
+                        driver.execute_script("arguments[0].value = '';", campo_documento)
+                
                 time.sleep(0.5)
                 
-                # Clica no campo
-                campo_documento.click()
+                # Tenta diferentes métodos para clicar no campo
+                try:
+                    campo_documento.click()
+                except:
+                    try:
+                        actions.move_to_element(campo_documento).click().perform()
+                    except:
+                        driver.execute_script("arguments[0].click();", campo_documento)
+                
                 time.sleep(0.5)
                 
                 # Obtém o documento e formata
@@ -1007,10 +1045,27 @@ def preencher_formulario(driver, actions, row, index, df: pd.DataFrame, tentativ
                 doc_formatado = formatar_documento(numeros)
                 print(f"[Linha {index}] Preenchendo documento: {doc_formatado}")
                 
-                # Preenche o documento caractere por caractere
-                for digito in doc_formatado:
-                    campo_documento.send_keys(digito)
-                    time.sleep(0.1)
+                # Tenta diferentes métodos para preencher o campo
+                try:
+                    # Método 1: Preenche caractere por caractere
+                    for digito in doc_formatado:
+                        campo_documento.send_keys(digito)
+                        time.sleep(0.1)
+                except:
+                    try:
+                        # Método 2: Preenche tudo de uma vez
+                        campo_documento.send_keys(doc_formatado)
+                    except:
+                        try:
+                            # Método 3: Usa JavaScript
+                            driver.execute_script(f"arguments[0].value = '{doc_formatado}';", campo_documento)
+                            # Dispara evento de input para garantir que o valor foi registrado
+                            driver.execute_script("arguments[0].dispatchEvent(new Event('input', { bubbles: true }));", campo_documento)
+                        except Exception as e:
+                            print(f"[Linha {index}] ❌ Erro ao preencher documento: {str(e)}")
+                            df.at[index, 'Observação'] = f"Erro ao preencher documento: {str(e)}"
+                            df.to_excel(EXCEL_PATH, index=False)
+                            return None
                 
                 # Aguarda um momento para garantir que o valor foi preenchido
                 time.sleep(1)
@@ -1023,6 +1078,7 @@ def preencher_formulario(driver, actions, row, index, df: pd.DataFrame, tentativ
                     print(f"[Linha {index}] ⚠️ Campo está vazio após preenchimento")
                     # Tenta preencher novamente usando JavaScript
                     driver.execute_script(f"arguments[0].value = '{doc_formatado}';", campo_documento)
+                    driver.execute_script("arguments[0].dispatchEvent(new Event('input', { bubbles: true }));", campo_documento)
                     time.sleep(1)
                     valor_preenchido = campo_documento.get_attribute('value')
                     print(f"[Linha {index}] Valor após tentativa JavaScript: {valor_preenchido}")
