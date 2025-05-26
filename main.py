@@ -689,6 +689,24 @@ def clicar_botao_consulta(driver, index):
 # Nova função para verificar a tela atual
 def verificar_tela_atual(driver, index):
     try:
+        # Verificar se está na tela de formulário (usando múltiplos seletores)
+        form_selectors = [
+            "//form",
+            "//sc-form-field",
+            "//input[@type='text']",
+            "//div[contains(@class, 'sc-card-content')]//input"
+        ]
+        
+        for selector in form_selectors:
+            try:
+                WebDriverWait(driver, 5).until(
+                    EC.presence_of_element_located((By.XPATH, selector))
+                )
+                print(f"[Linha {index}] Tela atual: Formulário (detectado por {selector})")
+                return "formulario"
+            except TimeoutException:
+                continue
+
         # Verificar se está na tela de consulta (campo de documento presente)
         campo_documento_xpath = '/html/body/div/sc-app/sc-template/sc-root/main/section/sc-content/sc-consult/div/div[2]/div/sc-card-content/div/main/form/div/div[2]/sc-form-field/div/input'
         try:
@@ -708,17 +726,6 @@ def verificar_tela_atual(driver, index):
             )
             print(f"[Linha {index}] Tela atual: Seleção de conta")
             return "selecao_conta"
-        except TimeoutException:
-            pass
-
-        # Verificar se está na tela de formulário
-        form_xpath = "//form"
-        try:
-            WebDriverWait(driver, 5).until(
-                EC.presence_of_element_located((By.XPATH, form_xpath))
-            )
-            print(f"[Linha {index}] Tela atual: Formulário")
-            return "formulario"
         except TimeoutException:
             pass
 
@@ -842,6 +849,15 @@ def clicar_botao_registro_chamado(driver, index):
             print(f"[Linha {index}] ❌ Timeout ao localizar botão de registro de chamado")
             return False
         
+        # Tenta remover o elemento interceptador primeiro
+        try:
+            elemento_interceptador = driver.find_element(By.XPATH, "//div[contains(@class, 'col-offset-start-6')]")
+            driver.execute_script("arguments[0].remove();", elemento_interceptador)
+            print(f"[Linha {index}] ✅ Elemento interceptador removido")
+            time.sleep(1)
+        except Exception as e:
+            print(f"[Linha {index}] ⚠️ Não foi possível remover elemento interceptador: {str(e)}")
+        
         # Rola até o elemento e aguarda um momento
         driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", botao)
         time.sleep(2)
@@ -859,7 +875,13 @@ def clicar_botao_registro_chamado(driver, index):
                     driver.execute_script("arguments[0].click();", botao)
                     time.sleep(2)
                     print(f"[Linha {index}] ✅ Botão clicado via JavaScript")
-                    return True
+                    
+                    # Verifica se o formulário foi aberto
+                    if verificar_tela_atual(driver, index) == "formulario":
+                        print(f"[Linha {index}] ✅ Formulário aberto com sucesso")
+                        return True
+                    else:
+                        print(f"[Linha {index}] ⚠️ Formulário não foi aberto após clique")
                 except Exception as e:
                     print(f"[Linha {index}] ⚠️ Falha ao clicar via JavaScript: {str(e)}")
                 
@@ -869,7 +891,13 @@ def clicar_botao_registro_chamado(driver, index):
                     actions.move_to_element(botao).pause(1).click().perform()
                     time.sleep(2)
                     print(f"[Linha {index}] ✅ Botão clicado via ActionChains")
-                    return True
+                    
+                    # Verifica se o formulário foi aberto
+                    if verificar_tela_atual(driver, index) == "formulario":
+                        print(f"[Linha {index}] ✅ Formulário aberto com sucesso")
+                        return True
+                    else:
+                        print(f"[Linha {index}] ⚠️ Formulário não foi aberto após clique")
                 except Exception as e:
                     print(f"[Linha {index}] ⚠️ Falha ao clicar via ActionChains: {str(e)}")
                 
@@ -878,7 +906,13 @@ def clicar_botao_registro_chamado(driver, index):
                     botao.click()
                     time.sleep(2)
                     print(f"[Linha {index}] ✅ Botão clicado com sucesso")
-                    return True
+                    
+                    # Verifica se o formulário foi aberto
+                    if verificar_tela_atual(driver, index) == "formulario":
+                        print(f"[Linha {index}] ✅ Formulário aberto com sucesso")
+                        return True
+                    else:
+                        print(f"[Linha {index}] ⚠️ Formulário não foi aberto após clique")
                 except ElementClickInterceptedException:
                     print(f"[Linha {index}] ⚠️ Clique interceptado, tentando remover elemento interceptador...")
                     try:
@@ -888,8 +922,13 @@ def clicar_botao_registro_chamado(driver, index):
                         time.sleep(1)
                         botao.click()
                         time.sleep(2)
-                        print(f"[Linha {index}] ✅ Botão clicado após remover elemento interceptador")
-                        return True
+                        
+                        # Verifica se o formulário foi aberto
+                        if verificar_tela_atual(driver, index) == "formulario":
+                            print(f"[Linha {index}] ✅ Formulário aberto com sucesso")
+                            return True
+                        else:
+                            print(f"[Linha {index}] ⚠️ Formulário não foi aberto após clique")
                     except Exception as e:
                         print(f"[Linha {index}] ⚠️ Falha ao remover elemento interceptador: {str(e)}")
                 
