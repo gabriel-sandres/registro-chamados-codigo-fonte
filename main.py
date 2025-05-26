@@ -936,20 +936,61 @@ def preencher_formulario(driver, actions, row, index, df: pd.DataFrame, tentativ
             # Preenche os campos do formulário
             try:
                 # Preenche a categoria
+                print(f"[Linha {index}] Preenchendo categoria: {row['Categoria']}")
                 categoria_xpath = '/html/body/div[1]/sc-app/sc-template/sc-root/main/section/sc-content/sc-consult/div/div[2]/div/sc-card-content/div/main/form/div/div[4]/sc-card/div/sc-card-content/div/div/div[1]/sc-form-field/div/input'
-                preencher_campo_com_js(driver, categoria_xpath, row['Categoria'])
+                campo_categoria = WebDriverWait(driver, 10).until(
+                    EC.element_to_be_clickable((By.XPATH, categoria_xpath))
+                )
+                driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", campo_categoria)
                 time.sleep(1)
+                campo_categoria.clear()
+                campo_categoria.send_keys(row['Categoria'])
+                time.sleep(1)
+                campo_categoria.send_keys(Keys.TAB)
+                print(f"[Linha {index}] ✅ Categoria preenchida")
 
                 # Preenche o serviço
+                print(f"[Linha {index}] Preenchendo serviço: {row['Serviço']}")
                 servico_xpath = '/html/body/div[1]/sc-app/sc-template/sc-root/main/section/sc-content/sc-consult/div/div[2]/div/sc-card-content/div/main/form/div/div[4]/sc-card/div/sc-card-content/div/div/div[2]/sc-form-field/div/input'
                 servico_normalizado = normalizar_servico(row['Serviço'])
-                preencher_campo_com_js(driver, servico_xpath, servico_normalizado)
+                campo_servico = WebDriverWait(driver, 10).until(
+                    EC.element_to_be_clickable((By.XPATH, servico_xpath))
+                )
+                driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", campo_servico)
                 time.sleep(1)
+                campo_servico.clear()
+                campo_servico.send_keys(servico_normalizado)
+                time.sleep(1)
+                campo_servico.send_keys(Keys.TAB)
+                print(f"[Linha {index}] ✅ Serviço preenchido")
 
                 # Preenche o protocolo PLAD
+                print(f"[Linha {index}] Preenchendo protocolo PLAD: {row['Protocolo PLAD']}")
                 protocolo_xpath = '/html/body/div[1]/sc-app/sc-template/sc-root/main/section/sc-content/sc-consult/div/div[2]/div/sc-card-content/div/main/form/div/div[4]/sc-card/div/sc-card-content/div/div/div[3]/sc-form-field/div/input'
-                preencher_campo_com_js(driver, protocolo_xpath, str(row['Protocolo PLAD']))
+                campo_protocolo = WebDriverWait(driver, 10).until(
+                    EC.element_to_be_clickable((By.XPATH, protocolo_xpath))
+                )
+                driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", campo_protocolo)
                 time.sleep(1)
+                campo_protocolo.clear()
+                campo_protocolo.send_keys(str(row['Protocolo PLAD']))
+                time.sleep(1)
+                campo_protocolo.send_keys(Keys.TAB)
+                print(f"[Linha {index}] ✅ Protocolo PLAD preenchido")
+
+                # Verifica se os campos foram preenchidos corretamente
+                valor_categoria = campo_categoria.get_attribute('value')
+                valor_servico = campo_servico.get_attribute('value')
+                valor_protocolo = campo_protocolo.get_attribute('value')
+
+                print(f"[Linha {index}] Valores preenchidos:")
+                print(f"Categoria: {valor_categoria}")
+                print(f"Serviço: {valor_servico}")
+                print(f"Protocolo: {valor_protocolo}")
+
+                if not valor_categoria or not valor_servico or not valor_protocolo:
+                    print(f"[Linha {index}] ⚠️ Alguns campos não foram preenchidos corretamente")
+                    return None
 
                 print(f"[Linha {index}] ✅ Formulário preenchido com sucesso")
                 return True
@@ -998,7 +1039,7 @@ def preencher_formulario(driver, actions, row, index, df: pd.DataFrame, tentativ
                 )
                 
                 # Rola até o elemento
-                driver.execute_script("arguments[0].scrollIntoView(true);", campo_documento)
+                driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", campo_documento)
                 time.sleep(1)
                 
                 # Limpa o campo
