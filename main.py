@@ -686,15 +686,17 @@ def clicar_botao_consulta(driver, index):
         print(f"[Linha {index}] ❌ Erro ao tentar clicar no botão consultar: {str(e)}")
         return False
 
-# Nova função para verificar a tela atual
 def verificar_tela_atual(driver, index):
     try:
         # Verificar se está na tela de formulário (usando múltiplos seletores)
         form_selectors = [
-            "//form",
-            "//sc-form-field",
-            "//input[@type='text']",
-            "//div[contains(@class, 'sc-card-content')]//input"
+            "//form[@novalidate]",
+            "//input[@id='serviceTypeId']",
+            "//input[@id='categoryId']",
+            "//input[@id='serviceId']",
+            "//textarea[@id='description']",
+            "//div[contains(@class, 'ss-form-group')]//input",
+            "//div[contains(@class, 'ss-form-group')]//textarea"
         ]
         
         for selector in form_selectors:
@@ -839,7 +841,7 @@ def clicar_botao_registro_chamado(driver, index):
         print(f"[Linha {index}] Tentando clicar no botão de registro de chamado...")
         botao_xpath = '/html/body/div[1]/sc-app/sc-register-ticket-button/div/div/div/button'
         
-        # Espera o botão estar presente e clicável
+        # Espera o botão estar presente
         try:
             botao = WebDriverWait(driver, 20).until(
                 EC.presence_of_element_located((By.XPATH, botao_xpath))
