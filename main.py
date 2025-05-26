@@ -686,29 +686,9 @@ def clicar_botao_consulta(driver, index):
         print(f"[Linha {index}] ❌ Erro ao tentar clicar no botão consultar: {str(e)}")
         return False
 
+# Nova função para verificar a tela atual
 def verificar_tela_atual(driver, index):
     try:
-        # Verificar se está na tela de formulário (usando múltiplos seletores)
-        form_selectors = [
-            "//form[@novalidate]",
-            "//input[@id='serviceTypeId']",
-            "//input[@id='categoryId']",
-            "//input[@id='serviceId']",
-            "//textarea[@id='description']",
-            "//div[contains(@class, 'ss-form-group')]//input",
-            "//div[contains(@class, 'ss-form-group')]//textarea"
-        ]
-        
-        for selector in form_selectors:
-            try:
-                WebDriverWait(driver, 5).until(
-                    EC.presence_of_element_located((By.XPATH, selector))
-                )
-                print(f"[Linha {index}] Tela atual: Formulário (detectado por {selector})")
-                return "formulario"
-            except TimeoutException:
-                continue
-
         # Verificar se está na tela de consulta (campo de documento presente)
         campo_documento_xpath = '/html/body/div/sc-app/sc-template/sc-root/main/section/sc-content/sc-consult/div/div[2]/div/sc-card-content/div/main/form/div/div[2]/sc-form-field/div/input'
         try:
@@ -728,6 +708,17 @@ def verificar_tela_atual(driver, index):
             )
             print(f"[Linha {index}] Tela atual: Seleção de conta")
             return "selecao_conta"
+        except TimeoutException:
+            pass
+
+        # Verificar se está na tela de formulário
+        form_xpath = "//form"
+        try:
+            WebDriverWait(driver, 5).until(
+                EC.presence_of_element_located((By.XPATH, form_xpath))
+            )
+            print(f"[Linha {index}] Tela atual: Formulário")
+            return "formulario"
         except TimeoutException:
             pass
 
@@ -841,7 +832,7 @@ def clicar_botao_registro_chamado(driver, index):
         print(f"[Linha {index}] Tentando clicar no botão de registro de chamado...")
         botao_xpath = '/html/body/div[1]/sc-app/sc-register-ticket-button/div/div/div/button'
         
-        # Espera o botão estar presente
+        # Espera o botão estar presente e clicável
         try:
             botao = WebDriverWait(driver, 20).until(
                 EC.presence_of_element_located((By.XPATH, botao_xpath))
@@ -850,15 +841,6 @@ def clicar_botao_registro_chamado(driver, index):
         except TimeoutException:
             print(f"[Linha {index}] ❌ Timeout ao localizar botão de registro de chamado")
             return False
-        
-        # Tenta remover o elemento interceptador primeiro
-        try:
-            elemento_interceptador = driver.find_element(By.XPATH, "//div[contains(@class, 'col-offset-start-6')]")
-            driver.execute_script("arguments[0].remove();", elemento_interceptador)
-            print(f"[Linha {index}] ✅ Elemento interceptador removido")
-            time.sleep(1)
-        except Exception as e:
-            print(f"[Linha {index}] ⚠️ Não foi possível remover elemento interceptador: {str(e)}")
         
         # Rola até o elemento e aguarda um momento
         driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", botao)
@@ -877,13 +859,7 @@ def clicar_botao_registro_chamado(driver, index):
                     driver.execute_script("arguments[0].click();", botao)
                     time.sleep(2)
                     print(f"[Linha {index}] ✅ Botão clicado via JavaScript")
-                    
-                    # Verifica se o formulário foi aberto
-                    if verificar_tela_atual(driver, index) == "formulario":
-                        print(f"[Linha {index}] ✅ Formulário aberto com sucesso")
-                        return True
-                    else:
-                        print(f"[Linha {index}] ⚠️ Formulário não foi aberto após clique")
+                    return True
                 except Exception as e:
                     print(f"[Linha {index}] ⚠️ Falha ao clicar via JavaScript: {str(e)}")
                 
@@ -893,13 +869,7 @@ def clicar_botao_registro_chamado(driver, index):
                     actions.move_to_element(botao).pause(1).click().perform()
                     time.sleep(2)
                     print(f"[Linha {index}] ✅ Botão clicado via ActionChains")
-                    
-                    # Verifica se o formulário foi aberto
-                    if verificar_tela_atual(driver, index) == "formulario":
-                        print(f"[Linha {index}] ✅ Formulário aberto com sucesso")
-                        return True
-                    else:
-                        print(f"[Linha {index}] ⚠️ Formulário não foi aberto após clique")
+                    return True
                 except Exception as e:
                     print(f"[Linha {index}] ⚠️ Falha ao clicar via ActionChains: {str(e)}")
                 
@@ -908,13 +878,7 @@ def clicar_botao_registro_chamado(driver, index):
                     botao.click()
                     time.sleep(2)
                     print(f"[Linha {index}] ✅ Botão clicado com sucesso")
-                    
-                    # Verifica se o formulário foi aberto
-                    if verificar_tela_atual(driver, index) == "formulario":
-                        print(f"[Linha {index}] ✅ Formulário aberto com sucesso")
-                        return True
-                    else:
-                        print(f"[Linha {index}] ⚠️ Formulário não foi aberto após clique")
+                    return True
                 except ElementClickInterceptedException:
                     print(f"[Linha {index}] ⚠️ Clique interceptado, tentando remover elemento interceptador...")
                     try:
@@ -924,13 +888,8 @@ def clicar_botao_registro_chamado(driver, index):
                         time.sleep(1)
                         botao.click()
                         time.sleep(2)
-                        
-                        # Verifica se o formulário foi aberto
-                        if verificar_tela_atual(driver, index) == "formulario":
-                            print(f"[Linha {index}] ✅ Formulário aberto com sucesso")
-                            return True
-                        else:
-                            print(f"[Linha {index}] ⚠️ Formulário não foi aberto após clique")
+                        print(f"[Linha {index}] ✅ Botão clicado após remover elemento interceptador")
+                        return True
                     except Exception as e:
                         print(f"[Linha {index}] ⚠️ Falha ao remover elemento interceptador: {str(e)}")
                 
@@ -972,71 +931,82 @@ def preencher_formulario(driver, actions, row, index, df: pd.DataFrame, tentativ
         # Verifica se está na tela correta
         tela_atual = verificar_tela_atual(driver, index)
         
-        # Se não estiver na tela de consulta, volta para ela
-        if tela_atual != "consulta":
-            print(f"[Linha {index}] ⚠️ Não está na tela de consulta. Voltando para a tela inicial...")
-            driver.get(BASE_URL)
-            time.sleep(2)
-            esperar_spinner_desaparecer(driver, index)
-            tela_atual = verificar_tela_atual(driver, index)
-        
-        if tela_atual == "consulta":
-            print(f"[Linha {index}] Está na tela de consulta. Preenchendo documento...")
-            
-            # Tenta diferentes XPaths para o campo de documento
-            campo_documento_xpaths = [
-                '/html/body/div/sc-app/sc-template/sc-root/main/section/sc-content/sc-consult/div/div[2]/div/sc-card-content/div/main/form/div/div[2]/sc-form-field/div/input',
-                '//input[@type="text" and @placeholder="Digite o documento"]',
-                '//input[contains(@placeholder, "documento")]',
-                '//sc-form-field//input[@type="text"]',
-                '//form//input[@type="text"]'
-            ]
-            
-            campo_documento = None
-            for xpath in campo_documento_xpaths:
-                try:
-                    print(f"[Linha {index}] Tentando localizar campo com XPath: {xpath}")
-                    campo_documento = WebDriverWait(driver, 5).until(
-                        EC.element_to_be_clickable((By.XPATH, xpath))
-                    )
-                    if campo_documento:
-                        print(f"[Linha {index}] ✅ Campo encontrado com XPath: {xpath}")
-                        break
-                except:
-                    continue
-            
-            if not campo_documento:
-                print(f"[Linha {index}] ❌ Não foi possível encontrar o campo de documento")
-                df.at[index, 'Observação'] = "Campo de documento não encontrado"
+        if tela_atual == "formulario":
+            print(f"[Linha {index}] Já está na tela de formulário")
+            # Preenche os campos do formulário
+            try:
+                # Preenche a categoria
+                categoria_xpath = '/html/body/div[1]/sc-app/sc-template/sc-root/main/section/sc-content/sc-consult/div/div[2]/div/sc-card-content/div/main/form/div/div[4]/sc-card/div/sc-card-content/div/div/div[1]/sc-form-field/div/input'
+                preencher_campo_com_js(driver, categoria_xpath, row['Categoria'])
+                time.sleep(1)
+
+                # Preenche o serviço
+                servico_xpath = '/html/body/div[1]/sc-app/sc-template/sc-root/main/section/sc-content/sc-consult/div/div[2]/div/sc-card-content/div/main/form/div/div[4]/sc-card/div/sc-card-content/div/div/div[2]/sc-form-field/div/input'
+                servico_normalizado = normalizar_servico(row['Serviço'])
+                preencher_campo_com_js(driver, servico_xpath, servico_normalizado)
+                time.sleep(1)
+
+                # Preenche o protocolo PLAD
+                protocolo_xpath = '/html/body/div[1]/sc-app/sc-template/sc-root/main/section/sc-content/sc-consult/div/div[2]/div/sc-card-content/div/main/form/div/div[4]/sc-card/div/sc-card-content/div/div/div[3]/sc-form-field/div/input'
+                preencher_campo_com_js(driver, protocolo_xpath, str(row['Protocolo PLAD']))
+                time.sleep(1)
+
+                print(f"[Linha {index}] ✅ Formulário preenchido com sucesso")
+                return True
+
+            except Exception as e:
+                print(f"[Linha {index}] ❌ Erro ao preencher formulário: {str(e)}")
+                df.at[index, 'Observação'] = f"Erro ao preencher formulário: {str(e)}"
                 df.to_excel(EXCEL_PATH, index=False)
                 return None
-            
+
+        elif tela_atual == "selecao_conta":
+            print(f"[Linha {index}] ⚠️ Está na tela de seleção de conta. Tentando selecionar conta...")
+            if not selecionar_conta_por_cooperativa(driver, row['Cooperativa'], index):
+                df.at[index, 'Observação'] = "Falha ao selecionar conta"
+                df.to_excel(EXCEL_PATH, index=False)
+                return None
+            if not clicar_menu_cobranca(driver, index):
+                df.at[index, 'Observação'] = "Falha ao clicar no menu Cobrança"
+                df.to_excel(EXCEL_PATH, index=False)
+                return None
+            if not clicar_botao_registro_chamado(driver, index):
+                df.at[index, 'Observação'] = "Falha ao clicar no botão de registro de chamado"
+                df.to_excel(EXCEL_PATH, index=False)
+                return None
+            # Aguarda o campo de categoria do formulário ficar visível/clicável
             try:
+                categoria_xpath = '/html/body/div[1]/sc-app/sc-template/sc-root/main/section/sc-content/sc-consult/div/div[2]/div/sc-card-content/div/main/form/div/div[4]/sc-card/div/sc-card-content/div/div/div[1]/sc-form-field/div/input'
+                WebDriverWait(driver, 20).until(
+                    EC.element_to_be_clickable((By.XPATH, categoria_xpath))
+                )
+                print(f"[Linha {index}] ✅ Formulário aberto e pronto para preenchimento")
+            except Exception as e:
+                print(f"[Linha {index}] ❌ Formulário não abriu corretamente: {str(e)}")
+                df.at[index, 'Observação'] = "Formulário não abriu corretamente"
+                df.to_excel(EXCEL_PATH, index=False)
+                return None
+            return preencher_formulario(driver, actions, row, index, df, tentativa + 1)
+
+        elif tela_atual == "consulta":
+            print(f"[Linha {index}] Está na tela de consulta. Preenchendo documento...")
+            campo_documento_xpath = '/html/body/div/sc-app/sc-template/sc-root/main/section/sc-content/sc-consult/div/div[2]/div/sc-card-content/div/main/form/div/div[2]/sc-form-field/div/input'
+            try:
+                # Espera o campo estar presente e clicável
+                campo_documento = WebDriverWait(driver, 30).until(
+                    EC.element_to_be_clickable((By.XPATH, campo_documento_xpath))
+                )
+                
                 # Rola até o elemento
-                driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", campo_documento)
+                driver.execute_script("arguments[0].scrollIntoView(true);", campo_documento)
                 time.sleep(1)
                 
-                # Tenta diferentes métodos para limpar o campo
-                try:
-                    campo_documento.clear()
-                except:
-                    try:
-                        campo_documento.send_keys(Keys.CONTROL + "a")
-                        campo_documento.send_keys(Keys.DELETE)
-                    except:
-                        driver.execute_script("arguments[0].value = '';", campo_documento)
-                
+                # Limpa o campo
+                campo_documento.clear()
                 time.sleep(0.5)
                 
-                # Tenta diferentes métodos para clicar no campo
-                try:
-                    campo_documento.click()
-                except:
-                    try:
-                        actions.move_to_element(campo_documento).click().perform()
-                    except:
-                        driver.execute_script("arguments[0].click();", campo_documento)
-                
+                # Clica no campo
+                campo_documento.click()
                 time.sleep(0.5)
                 
                 # Obtém o documento e formata
@@ -1045,27 +1015,10 @@ def preencher_formulario(driver, actions, row, index, df: pd.DataFrame, tentativ
                 doc_formatado = formatar_documento(numeros)
                 print(f"[Linha {index}] Preenchendo documento: {doc_formatado}")
                 
-                # Tenta diferentes métodos para preencher o campo
-                try:
-                    # Método 1: Preenche caractere por caractere
-                    for digito in doc_formatado:
-                        campo_documento.send_keys(digito)
-                        time.sleep(0.1)
-                except:
-                    try:
-                        # Método 2: Preenche tudo de uma vez
-                        campo_documento.send_keys(doc_formatado)
-                    except:
-                        try:
-                            # Método 3: Usa JavaScript
-                            driver.execute_script(f"arguments[0].value = '{doc_formatado}';", campo_documento)
-                            # Dispara evento de input para garantir que o valor foi registrado
-                            driver.execute_script("arguments[0].dispatchEvent(new Event('input', { bubbles: true }));", campo_documento)
-                        except Exception as e:
-                            print(f"[Linha {index}] ❌ Erro ao preencher documento: {str(e)}")
-                            df.at[index, 'Observação'] = f"Erro ao preencher documento: {str(e)}"
-                            df.to_excel(EXCEL_PATH, index=False)
-                            return None
+                # Preenche o documento caractere por caractere
+                for digito in doc_formatado:
+                    campo_documento.send_keys(digito)
+                    time.sleep(0.1)
                 
                 # Aguarda um momento para garantir que o valor foi preenchido
                 time.sleep(1)
@@ -1078,7 +1031,6 @@ def preencher_formulario(driver, actions, row, index, df: pd.DataFrame, tentativ
                     print(f"[Linha {index}] ⚠️ Campo está vazio após preenchimento")
                     # Tenta preencher novamente usando JavaScript
                     driver.execute_script(f"arguments[0].value = '{doc_formatado}';", campo_documento)
-                    driver.execute_script("arguments[0].dispatchEvent(new Event('input', { bubbles: true }));", campo_documento)
                     time.sleep(1)
                     valor_preenchido = campo_documento.get_attribute('value')
                     print(f"[Linha {index}] Valor após tentativa JavaScript: {valor_preenchido}")
@@ -1134,126 +1086,6 @@ def preencher_formulario(driver, actions, row, index, df: pd.DataFrame, tentativ
             except Exception as e:
                 print(f"[Linha {index}] ❌ Erro ao preencher documento: {str(e)}")
                 df.at[index, 'Observação'] = f"Erro ao preencher documento: {str(e)}"
-                df.to_excel(EXCEL_PATH, index=False)
-                return None
-
-        elif tela_atual == "selecao_conta":
-            print(f"[Linha {index}] ⚠️ Está na tela de seleção de conta. Tentando selecionar conta...")
-            if not selecionar_conta_por_cooperativa(driver, row['Cooperativa'], index):
-                df.at[index, 'Observação'] = "Falha ao selecionar conta"
-                df.to_excel(EXCEL_PATH, index=False)
-                return None
-            if not clicar_menu_cobranca(driver, index):
-                df.at[index, 'Observação'] = "Falha ao clicar no menu Cobrança"
-                df.to_excel(EXCEL_PATH, index=False)
-                return None
-            if not clicar_botao_registro_chamado(driver, index):
-                df.at[index, 'Observação'] = "Falha ao clicar no botão de registro de chamado"
-                df.to_excel(EXCEL_PATH, index=False)
-                return None
-            
-            # Aguarda o formulário estar presente
-            try:
-                form_xpath = "//form[@novalidate]"
-                WebDriverWait(driver, 20).until(
-                    EC.presence_of_element_located((By.XPATH, form_xpath))
-                )
-                print(f"[Linha {index}] ✅ Formulário aberto e pronto para preenchimento")
-                return preencher_formulario(driver, actions, row, index, df, tentativa + 1)
-            except Exception as e:
-                print(f"[Linha {index}] ❌ Formulário não abriu corretamente: {str(e)}")
-                df.at[index, 'Observação'] = "Formulário não abriu corretamente"
-                df.to_excel(EXCEL_PATH, index=False)
-                return None
-
-        elif tela_atual == "formulario":
-            print(f"[Linha {index}] Já está na tela de formulário")
-            try:
-                # Espera o formulário estar presente
-                form_xpath = "//form[@novalidate]"
-                WebDriverWait(driver, 20).until(
-                    EC.presence_of_element_located((By.XPATH, form_xpath))
-                )
-                print(f"[Linha {index}] ✅ Formulário encontrado")
-
-                # Preenche o tipo de atendimento
-                print(f"[Linha {index}] Preenchendo tipo de atendimento...")
-                tipo_atendimento_xpath = "//input[@id='serviceTypeId']"
-                campo_tipo = WebDriverWait(driver, 10).until(
-                    EC.element_to_be_clickable((By.XPATH, tipo_atendimento_xpath))
-                )
-                driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", campo_tipo)
-                time.sleep(1)
-                campo_tipo.clear()
-                campo_tipo.send_keys("N1 Chamados")
-                time.sleep(1)
-                campo_tipo.send_keys(Keys.TAB)
-                print(f"[Linha {index}] ✅ Tipo de atendimento preenchido")
-
-                # Preenche a categoria
-                print(f"[Linha {index}] Preenchendo categoria: {row['Categoria']}")
-                categoria_xpath = "//input[@id='categoryId']"
-                campo_categoria = WebDriverWait(driver, 10).until(
-                    EC.element_to_be_clickable((By.XPATH, categoria_xpath))
-                )
-                driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", campo_categoria)
-                time.sleep(1)
-                campo_categoria.clear()
-                campo_categoria.send_keys(row['Categoria'])
-                time.sleep(1)
-                campo_categoria.send_keys(Keys.TAB)
-                print(f"[Linha {index}] ✅ Categoria preenchida")
-
-                # Preenche o serviço
-                print(f"[Linha {index}] Preenchendo serviço: {row['Serviço']}")
-                servico_xpath = "//input[@id='serviceId']"
-                servico_normalizado = normalizar_servico(row['Serviço'])
-                campo_servico = WebDriverWait(driver, 10).until(
-                    EC.element_to_be_clickable((By.XPATH, servico_xpath))
-                )
-                driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", campo_servico)
-                time.sleep(1)
-                campo_servico.clear()
-                campo_servico.send_keys(servico_normalizado)
-                time.sleep(1)
-                campo_servico.send_keys(Keys.TAB)
-                print(f"[Linha {index}] ✅ Serviço preenchido")
-
-                # Preenche o protocolo PLAD
-                print(f"[Linha {index}] Preenchendo protocolo PLAD: {row['Protocolo PLAD']}")
-                protocolo_xpath = "//input[@id='description']"
-                campo_protocolo = WebDriverWait(driver, 10).until(
-                    EC.element_to_be_clickable((By.XPATH, protocolo_xpath))
-                )
-                driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", campo_protocolo)
-                time.sleep(1)
-                campo_protocolo.clear()
-                campo_protocolo.send_keys(f"Protocolo PLAD: {row['Protocolo PLAD']}")
-                time.sleep(1)
-                print(f"[Linha {index}] ✅ Protocolo PLAD preenchido")
-
-                # Verifica se os campos foram preenchidos corretamente
-                valor_tipo = campo_tipo.get_attribute('value')
-                valor_categoria = campo_categoria.get_attribute('value')
-                valor_servico = campo_servico.get_attribute('value')
-                valor_protocolo = campo_protocolo.get_attribute('value')
-
-                print(f"[Linha {index}] Valores preenchidos:")
-                print(f"Tipo de Atendimento: {valor_tipo}")
-                print(f"Categoria: {valor_categoria}")
-                print(f"Serviço: {valor_servico}")
-                print(f"Protocolo: {valor_protocolo}")
-
-                if not valor_tipo or not valor_categoria or not valor_servico or not valor_protocolo:
-                    print(f"[Linha {index}] ⚠️ Alguns campos não foram preenchidos corretamente")
-                    return None
-
-                print(f"[Linha {index}] ✅ Formulário preenchido com sucesso")
-                return True
-
-            except Exception as e:
-                print(f"[Linha {index}] ❌ Erro ao preencher formulário: {str(e)}")
-                df.at[index, 'Observação'] = f"Erro ao preencher formulário: {str(e)}"
                 df.to_excel(EXCEL_PATH, index=False)
                 return None
         else:
