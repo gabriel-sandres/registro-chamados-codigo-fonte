@@ -831,14 +831,86 @@ def clicar_botao_registro_chamado(driver, index):
     try:
         print(f"[Linha {index}] Tentando clicar no botão de registro de chamado...")
         botao_xpath = '/html/body/div[1]/sc-app/sc-register-ticket-button/div/div/div/button'
-        botao = WebDriverWait(driver, 20).until(
-            EC.element_to_be_clickable((By.XPATH, botao_xpath))
-        )
-        driver.execute_script("arguments[0].scrollIntoView(true);", botao)
-        time.sleep(1)
-        botao.click()
-        print(f"[Linha {index}] ✅ Botão de registro de chamado clicado com sucesso")
-        return True
+        
+        # Espera o botão estar presente e clicável
+        try:
+            botao = WebDriverWait(driver, 20).until(
+                EC.presence_of_element_located((By.XPATH, botao_xpath))
+            )
+            print(f"[Linha {index}] ✅ Botão de registro de chamado encontrado")
+        except TimeoutException:
+            print(f"[Linha {index}] ❌ Timeout ao localizar botão de registro de chamado")
+            return False
+        
+        # Rola até o elemento e aguarda um momento
+        driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", botao)
+        time.sleep(2)
+        
+        # Tenta diferentes métodos de clique
+        tentativas = 0
+        max_tentativas = 3
+        
+        while tentativas < max_tentativas:
+            try:
+                print(f"[Linha {index}] Tentativa {tentativas + 1} de clicar no botão...")
+                
+                # Tenta clicar via JavaScript primeiro
+                try:
+                    driver.execute_script("arguments[0].click();", botao)
+                    time.sleep(2)
+                    print(f"[Linha {index}] ✅ Botão clicado via JavaScript")
+                    return True
+                except Exception as e:
+                    print(f"[Linha {index}] ⚠️ Falha ao clicar via JavaScript: {str(e)}")
+                
+                # Tenta clicar via ActionChains
+                try:
+                    actions = ActionChains(driver)
+                    actions.move_to_element(botao).pause(1).click().perform()
+                    time.sleep(2)
+                    print(f"[Linha {index}] ✅ Botão clicado via ActionChains")
+                    return True
+                except Exception as e:
+                    print(f"[Linha {index}] ⚠️ Falha ao clicar via ActionChains: {str(e)}")
+                
+                # Tenta clicar normalmente
+                try:
+                    botao.click()
+                    time.sleep(2)
+                    print(f"[Linha {index}] ✅ Botão clicado com sucesso")
+                    return True
+                except ElementClickInterceptedException:
+                    print(f"[Linha {index}] ⚠️ Clique interceptado, tentando remover elemento interceptador...")
+                    try:
+                        # Tenta remover o elemento que está interceptando o clique
+                        elemento_interceptador = driver.find_element(By.XPATH, "//div[contains(@class, 'col-offset-start-6')]")
+                        driver.execute_script("arguments[0].remove();", elemento_interceptador)
+                        time.sleep(1)
+                        botao.click()
+                        time.sleep(2)
+                        print(f"[Linha {index}] ✅ Botão clicado após remover elemento interceptador")
+                        return True
+                    except Exception as e:
+                        print(f"[Linha {index}] ⚠️ Falha ao remover elemento interceptador: {str(e)}")
+                
+                tentativas += 1
+                if tentativas < max_tentativas:
+                    print(f"[Linha {index}] ⚠️ Tentando novamente em 2 segundos...")
+                    time.sleep(2)
+                else:
+                    print(f"[Linha {index}] ❌ Todas as tentativas de clique falharam")
+                    return False
+                
+            except Exception as e:
+                print(f"[Linha {index}] ⚠️ Erro durante tentativa de clique: {str(e)}")
+                tentativas += 1
+                if tentativas < max_tentativas:
+                    time.sleep(2)
+                else:
+                    return False
+        
+        return False
+        
     except Exception as e:
         print(f"[Linha {index}] ❌ Erro ao clicar no botão de registro de chamado: {str(e)}")
         return False
