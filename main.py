@@ -810,19 +810,99 @@ def clicar_botao_abrir(driver, index):
 def clicar_menu_cobranca(driver, index):
     try:
         print(f"[Linha {index}] Tentando clicar no menu 'Cobrança'...")
-        cobranca_xpath = '/html/body/div[1]/sc-app/sc-template/sc-root/main/aside/sc-sidebar-container/aside/sc-sidebar/div[4]/div[10]'
-        menu_cobranca = WebDriverWait(driver, 20).until(
-            EC.element_to_be_clickable((By.XPATH, cobranca_xpath))
-        )
-        driver.execute_script("arguments[0].scrollIntoView(true);", menu_cobranca)
+        
+        # Tenta diferentes XPaths para encontrar o menu Cobrança
+        cobranca_xpaths = [
+            '//*[@id="products"]/div[10]/sc-card/div/div/div/div',
+            '/html/body/div[1]/sc-app/sc-template/sc-root/main/aside/sc-sidebar-container/aside/sc-sidebar/div[4]/div[10]/sc-card/div/div/div/div',
+            "//h6[contains(text(), 'Cobrança')]",
+            "//div[contains(@class, 'title-products')]//h6[contains(text(), 'Cobrança')]"
+        ]
+        
+        menu_cobranca = None
+        for xpath in cobranca_xpaths:
+            try:
+                menu_cobranca = WebDriverWait(driver, 5).until(
+                    EC.element_to_be_clickable((By.XPATH, xpath))
+                )
+                if menu_cobranca:
+                    print(f"[Linha {index}] Menu 'Cobrança' encontrado usando XPath: {xpath}")
+                    break
+            except:
+                continue
+        
+        if not menu_cobranca:
+            raise NoSuchElementException("Menu 'Cobrança' não encontrado com nenhum dos XPaths")
+        
+        # Rola até o elemento
+        driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", menu_cobranca)
         time.sleep(1)
-        try:
-            menu_cobranca.click()
-        except Exception as e:
-            print(f"[Linha {index}] ⚠️ Clique interceptado, tentando via JavaScript: {str(e)}")
-            driver.execute_script("arguments[0].click();", menu_cobranca)
-        print(f"[Linha {index}] ✅ Menu 'Cobrança' clicado com sucesso")
-        return True
+        
+        # Tenta diferentes métodos de clique
+        tentativas = 0
+        max_tentativas = 3
+        
+        while tentativas < max_tentativas:
+            try:
+                print(f"[Linha {index}] Tentativa {tentativas + 1} de clicar no menu 'Cobrança'...")
+                
+                # Tenta clicar via JavaScript primeiro
+                try:
+                    driver.execute_script("arguments[0].click();", menu_cobranca)
+                    time.sleep(2)
+                    print(f"[Linha {index}] ✅ Menu 'Cobrança' clicado via JavaScript")
+                    return True
+                except Exception as e:
+                    print(f"[Linha {index}] ⚠️ Falha ao clicar via JavaScript: {str(e)}")
+                
+                # Tenta clicar via ActionChains
+                try:
+                    actions = ActionChains(driver)
+                    actions.move_to_element(menu_cobranca).pause(1).click().perform()
+                    time.sleep(2)
+                    print(f"[Linha {index}] ✅ Menu 'Cobrança' clicado via ActionChains")
+                    return True
+                except Exception as e:
+                    print(f"[Linha {index}] ⚠️ Falha ao clicar via ActionChains: {str(e)}")
+                
+                # Tenta clicar normalmente
+                try:
+                    menu_cobranca.click()
+                    time.sleep(2)
+                    print(f"[Linha {index}] ✅ Menu 'Cobrança' clicado com sucesso")
+                    return True
+                except ElementClickInterceptedException:
+                    print(f"[Linha {index}] ⚠️ Clique interceptado, tentando remover elemento interceptador...")
+                    try:
+                        # Tenta remover o elemento que está interceptando o clique
+                        elemento_interceptador = driver.find_element(By.XPATH, "//div[contains(@class, 'col-offset-start-6')]")
+                        driver.execute_script("arguments[0].remove();", elemento_interceptador)
+                        time.sleep(1)
+                        menu_cobranca.click()
+                        time.sleep(2)
+                        print(f"[Linha {index}] ✅ Menu 'Cobrança' clicado após remover elemento interceptador")
+                        return True
+                    except Exception as e:
+                        print(f"[Linha {index}] ⚠️ Falha ao remover elemento interceptador: {str(e)}")
+                
+                tentativas += 1
+                if tentativas < max_tentativas:
+                    print(f"[Linha {index}] ⚠️ Tentando novamente em 2 segundos...")
+                    time.sleep(2)
+                else:
+                    print(f"[Linha {index}] ❌ Todas as tentativas de clique falharam")
+                    return False
+                
+            except Exception as e:
+                print(f"[Linha {index}] ⚠️ Erro durante tentativa de clique: {str(e)}")
+                tentativas += 1
+                if tentativas < max_tentativas:
+                    time.sleep(2)
+                else:
+                    return False
+        
+        return False
+        
     except Exception as e:
         print(f"[Linha {index}] ❌ Erro ao clicar no menu 'Cobrança': {str(e)}")
         return False
@@ -1113,14 +1193,22 @@ def preencher_formulario(driver, actions, row, index, df: pd.DataFrame, tentativ
                 df.at[index, 'Observação'] = "Falha ao selecionar conta"
                 df.to_excel(EXCEL_PATH, index=False)
                 return None
+            
+            # Após selecionar a conta, clica no menu Cobrança
             if not clicar_menu_cobranca(driver, index):
                 df.at[index, 'Observação'] = "Falha ao clicar no menu Cobrança"
                 df.to_excel(EXCEL_PATH, index=False)
                 return None
+            
+            # Aguarda um momento para o menu carregar
+            time.sleep(2)
+            
+            # Clica no botão de registro de chamado
             if not clicar_botao_registro_chamado(driver, index):
                 df.at[index, 'Observação'] = "Falha ao clicar no botão de registro de chamado"
                 df.to_excel(EXCEL_PATH, index=False)
                 return None
+            
             # Aguarda o campo de categoria do formulário ficar visível/clicável
             try:
                 categoria_xpath = '//*[@id="categoryId"]'
@@ -1133,6 +1221,7 @@ def preencher_formulario(driver, actions, row, index, df: pd.DataFrame, tentativ
                 df.at[index, 'Observação'] = "Formulário não abriu corretamente"
                 df.to_excel(EXCEL_PATH, index=False)
                 return None
+            
             return preencher_formulario(driver, actions, row, index, df, tentativa + 1)
 
         elif tela_atual == "consulta":
