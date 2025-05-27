@@ -1140,7 +1140,7 @@ def preencher_formulario(driver, actions, row, index, df: pd.DataFrame, tentativ
                 
             except Exception as e:
                 print(f"[Linha {index}] ❌ Erro ao preencher documento: {str(e)}")
-                df.at[index, 'Observação'] = f"Erro ao preencher documento: {str(e)}")
+                df.at[index, 'Observação'] = f"Erro ao preencher documento: {str(e)}"
                 df.to_excel(EXCEL_PATH, index=False)
                 return None
         else:
@@ -1152,7 +1152,7 @@ def preencher_formulario(driver, actions, row, index, df: pd.DataFrame, tentativ
             
     except Exception as e:
         print(f"[Linha {index}] ❌ Erro ao preencher formulário: {str(e)}")
-        df.at[index, 'Observação'] = f"Erro ao preencher formulário: {str(e)}")
+        df.at[index, 'Observação'] = f"Erro ao preencher formulário: {str(e)}"
         df.to_excel(EXCEL_PATH, index=False)
         return None
 
@@ -1170,7 +1170,7 @@ def tentar_preencher_formulario(driver, actions, row, index, df, max_tentativas=
             print(f"[Linha {index}] ❌ Erro na tentativa {tentativa + 1}: {str(e)}")
             if tentativa == max_tentativas - 1:
                 print(f"[Linha {index}] ❌ Todas as tentativas falharam")
-                df.at[index, 'Observação'] = f"Erro após {max_tentativas} tentativas: {str(e)}")
+                df.at[index, 'Observação'] = f"Erro após {max_tentativas} tentativas: {str(e)}"
                 df.to_excel(EXCEL_PATH, index=False)
                 return None
     return None
