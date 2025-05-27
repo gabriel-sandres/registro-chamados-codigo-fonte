@@ -17,7 +17,7 @@ import time
 
 # === CONFIGURAÇÕES GERAIS ===
 BASE_URL = "https://portal.sisbr.coop.br/visao360/consult"
-EXCEL_PATH = r"C:\\Users\\gabriel.sandres\\OneDrive - Sicoob\\Área de Trabalho\\registro_chamado\\registro_chamado\\planilha_registro.xlsx"
+EXCEL_PATH = os.getenv("EXCEL_PATH", os.path.join(os.path.dirname(__file__), "planilha_registro.xlsx"))
 CHROMEDRIVER_PATH = "chromedriver.exe"
 dotenv_path = "login.env"
 
