@@ -1004,6 +1004,7 @@ def preencher_formulario(driver, actions, row, index, df: pd.DataFrame, tentativ
                 print(f"[Linha {index}] Preenchendo Canal de autoatendimento...")
                 canal_autoatendimento_xpath = '/html/body/div[3]/div[2]/div/sc-register-ticket/sc-actionbar/div/div/div[2]/form/div/div[7]/sc-additional-category-data/form/div/div[2]/sc-form-field/div/select'
                 selecionar_opcao_select(driver, canal_autoatendimento_xpath, "não se aplica")
+                print(f"[Linha {index}] Canal de autoatendimento selecionado")
                 time.sleep(1)
 
                 print(f"[Linha {index}] ✅ Formulhando preenchimento com sucesso")
@@ -1293,5 +1294,5 @@ if __name__ == "__main__":
     try:
         main()
     except Exception as e:
-        logger.critical("❌ Sistema encerrado com erro crítico!") {str(e)}", exc_info=True)
+        logger.critical(f"❌ Sistema encerrado com erro crítico! {str(e)}", exc_info=True)
         raise
