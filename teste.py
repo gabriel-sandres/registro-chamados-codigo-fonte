@@ -1130,7 +1130,7 @@ def preencher_formulario(driver, actions, row, index, df: pd.DataFrame, tentativ
                         return preencher_formulario(driver, actions, row, index, df, tentativa + 1)
                     else:
                         print(f"[Linha {index}] ❌ Tela não mudou para seleção de conta após clicar em Abrir")
-                        df.at[index, 'Observação'] = "Tela não mudou para seleção de conta após clicar em Abrir")
+                        df.at[index, 'Observação'] = "Tela não mudou para seleção de conta após clicar em Abrir"
                         df.to_excel(EXCEL_PATH, index=False)
                         return None
                 else:
