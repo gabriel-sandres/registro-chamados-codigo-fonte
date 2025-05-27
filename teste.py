@@ -1080,7 +1080,7 @@ def preencher_formulario(driver, actions, row, index, df: pd.DataFrame, tentativ
                 time.sleep(1)
                 
                 # Verifica se o valor foi preenchido corretamente
-                valor_preenchido = campo_documento.get_attribute('value")
+                valor_preenchido = campo_documento.get_attribute('value')
                 print(f"[Linha {index}] Valor preenchido no campo: {valor_preenchido}]")
                 
                 if not valor_preenchido:
