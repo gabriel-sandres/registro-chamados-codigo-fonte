@@ -933,26 +933,132 @@ def preencher_formulario(driver, actions, row, index, df: pd.DataFrame, tentativ
         
         if tela_atual == "formulario":
             print(f"[Linha {index}] Já está na tela de formulário")
-            # Preenche os campos do formulário
             try:
-                # Preenche a categoria
-                categoria_xpath = '/html/body/div[1]/sc-app/sc-template/sc-root/main/section/sc-content/sc-consult/div/div[2]/div/sc-card-content/div/main/form/div/div[4]/sc-card/div/sc-card-content/div/div/div[1]/sc-form-field/div/input'
-                preencher_campo_com_js(driver, categoria_xpath, row['Categoria'])
+                # Campos do formulário
+                campos = {
+                    'tipo': {
+                        'xpath': '/html/body/div[3]/div[2]/div/sc-register-ticket/sc-actionbar/div/div/div[2]/form/div/div[3]/sc-form-field/div/input',
+                        'valor': 'Chat Receptivo'
+                    },
+                    'categoria': {
+                        'xpath': '/html/body/div[3]/div[2]/div/sc-register-ticket/sc-actionbar/div/div/div[2]/form/div/div[4]/sc-form-field/div/input',
+                        'valor': row['Categoria']
+                    },
+                    'subcategoria': {
+                        'xpath': '/html/body/div[3]/div[2]/div/sc-register-ticket/sc-actionbar/div/div/div[2]/form/div/div[5]/sc-form-field/div/input',
+                        'valor': 'Api Sicoob'
+                    },
+                    'servico': {
+                        'xpath': '/html/body/div[3]/div[2]/div/sc-register-ticket/sc-actionbar/div/div/div[2]/form/div/div[6]/sc-form-field/div/input',
+                        'valor': normalizar_servico(row['Serviço'])
+                    }
+                }
+
+                # Preenchendo os campos na ordem
+                for campo_nome, campo_info in campos.items():
+                    print(f"[Linha {index}] Preenchendo {campo_nome}...")
+                    campo = WebDriverWait(driver, 10).until(
+                        EC.presence_of_element_located((By.XPATH, campo_info['xpath']))
+                    )
+                    
+                    # Limpa o campo e define o valor usando JavaScript
+                    driver.execute_script("""
+                        arguments[0].value = '';
+                        arguments[0].value = arguments[1];
+                        arguments[0].dispatchEvent(new Event('input', { bubbles: true }));
+                        arguments[0].dispatchEvent(new Event('change', { bubbles: true }));
+                    """, campo, campo_info['valor'])
+                    
+                    time.sleep(1)
+                    print(f"[Linha {index}] {campo_nome} preenchido com: {campo_info['valor']}")
+
+                # Canal de autoatendimento
+                print(f"[Linha {index}] Preenchendo Canal de autoatendimento...")
+                canal_autoatendimento_xpath = '/html/body/div[3]/div[2]/div/sc-register-ticket/sc-actionbar/div/div/div[2]/form/div/div[7]/sc-additional-category-data/form/div/div[2]/sc-form-field/div/select'
+                selecionar_opcao_select(driver, canal_autoatendimento_xpath, "não se aplica")
+                print(f"[Linha {index}] Canal de autoatendimento selecionado")
                 time.sleep(1)
 
-                # Preenche o serviço
-                servico_xpath = '/html/body/div[1]/sc-app/sc-template/sc-root/main/section/sc-content/sc-consult/div/div[2]/div/sc-card-content/div/main/form/div/div[4]/sc-card/div/sc-card-content/div/div/div[2]/sc-form-field/div/input'
-                servico_normalizado = normalizar_servico(row['Serviço'])
-                preencher_campo_com_js(driver, servico_xpath, servico_normalizado)
+                # Protocolo
+                print(f"[Linha {index}] Preenchendo Protocolo...")
+                protocolo_xpath = '/html/body/div[3]/div[2]/div/sc-register-ticket/sc-actionbar/div/div/div[2]/form/div/div[8]/sc-additional-service-data/form/div/div[2]/sc-form-field/div/input'
+                campo_protocolo = WebDriverWait(driver, 10).until(
+                    EC.presence_of_element_located((By.XPATH, protocolo_xpath))
+                )
+                driver.execute_script("""
+                    arguments[0].value = '';
+                    arguments[0].value = arguments[1];
+                    arguments[0].dispatchEvent(new Event('input', { bubbles: true }));
+                    arguments[0].dispatchEvent(new Event('change', { bubbles: true }));
+                """, campo_protocolo, str(row['Protocolo PLAD']))
+                print(f"[Linha {index}] Protocolo preenchido: {row['Protocolo PLAD']}")
                 time.sleep(1)
 
-                # Preenche o protocolo PLAD
-                protocolo_xpath = '/html/body/div[1]/sc-app/sc-template/sc-root/main/section/sc-content/sc-consult/div/div[2]/div/sc-card-content/div/main/form/div/div[4]/sc-card/div/sc-card-content/div/div/div[3]/sc-form-field/div/input'
-                preencher_campo_com_js(driver, protocolo_xpath, str(row['Protocolo PLAD']))
+                # Descrição
+                print(f"[Linha {index}] Preenchendo Descrição...")
+                descricao_xpath = '/html/body/div[3]/div[2]/div/sc-register-ticket/sc-actionbar/div/div/div[2]/form/div/div[9]/sc-form-field/div/textarea'
+                campo_descricao = WebDriverWait(driver, 10).until(
+                    EC.presence_of_element_located((By.XPATH, descricao_xpath))
+                )
+                
+                # Mensagem padrão para descrição
+                MENSAGEM_PADRAO = "Registro de atendimento realizado na Plataforma de Atendimento Digital via automação"
+                
+                # Verifica se existe observação válida na coluna G
+                observacao = str(row.get('Observação', '')).strip()
+                # Define a descrição, tratando casos de nan, valores vazios e tamanho mínimo
+                if (pd.isna(row.get('Observação')) or 
+                    observacao.lower() == 'nan' or 
+                    not observacao or 
+                    len(observacao) < 10):
+                    descricao = MENSAGEM_PADRAO
+                    if observacao and len(observacao) < 10:
+                        print(f"[Linha {index}] Observação '{observacao}' tem menos de 10 caracteres. Usando mensagem padrão.")
+                else:
+                    descricao = observacao
+
+                driver.execute_script("""
+                    arguments[0].value = '';
+                    arguments[0].value = arguments[1];
+                    arguments[0].dispatchEvent(new Event('input', { bubbles: true }));
+                    arguments[0].dispatchEvent(new Event('change', { bubbles: true }));
+                """, campo_descricao, descricao)
+                print(f"[Linha {index}] Descrição preenchida: {descricao[:50]}..." if len(descricao) > 50 else f"[Linha {index}] Descrição preenchida: {descricao}")
                 time.sleep(1)
 
-                print(f"[Linha {index}] ✅ Formulário preenchido com sucesso")
-                return True
+                # Aguarda o botão Registrar ficar habilitado e clica nele
+                print(f"[Linha {index}] Aguardando botão Registrar ficar habilitado...")
+                registrar_xpath = '/html/body/div[3]/div[2]/div/sc-register-ticket/sc-actionbar/div/div/div[2]/form/div/div[20]/sc-button/button'
+                # Espera até o botão ficar clicável (não estar disabled)
+                WebDriverWait(driver, 30).until(
+                    lambda d: d.find_element(By.XPATH, registrar_xpath).is_enabled()
+                )
+                botao_registrar = driver.find_element(By.XPATH, registrar_xpath)
+                botao_registrar.click()
+                print(f"[Linha {index}] Botão Registrar clicado")
+                time.sleep(2)
+
+                # Aguarda e clica no botão Confirmar
+                print(f"[Linha {index}] Aguardando botão Confirmar...")
+                confirmar_xpath = '/html/body/div[3]/div[4]/div/sc-register-ticket-modal/sc-modal/div/div/sc-modal-footer/div/div/div[2]/sc-button/button'
+                botao_confirmar = WebDriverWait(driver, 10).until(
+                    EC.element_to_be_clickable((By.XPATH, confirmar_xpath))
+                )
+                botao_confirmar.click()
+                print(f"[Linha {index}] Botão Confirmar clicado")
+                time.sleep(2)
+
+                # Captura o número do protocolo
+                print(f"[Linha {index}] Capturando número do protocolo...")
+                protocolo_xpath = '/html/body/div[3]/div[4]/div/sc-view-ticket-data/sc-actionbar/div/div/div[2]/form/div/div[2]/sc-card/div/sc-card-content/div/div/div[1]/h5'
+                elemento_protocolo = WebDriverWait(driver, 10).until(
+                    EC.presence_of_element_located((By.XPATH, protocolo_xpath))
+                )
+                # Extrai o texto e remove espaços em branco
+                numero_protocolo = elemento_protocolo.text.strip()
+                print(f"[Linha {index}] Protocolo capturado: {numero_protocolo}")
+
+                return numero_protocolo
 
             except Exception as e:
                 print(f"[Linha {index}] ❌ Erro ao preencher formulário: {str(e)}")
@@ -976,7 +1082,7 @@ def preencher_formulario(driver, actions, row, index, df: pd.DataFrame, tentativ
                 return None
             # Aguarda o campo de categoria do formulário ficar visível/clicável
             try:
-                categoria_xpath = '/html/body/div[1]/sc-app/sc-template/sc-root/main/section/sc-content/sc-consult/div/div[2]/div/sc-card-content/div/main/form/div/div[4]/sc-card/div/sc-card-content/div/div/div[1]/sc-form-field/div/input'
+                categoria_xpath = '/html/body/div[3]/div[2]/div/sc-register-ticket/sc-actionbar/div/div/div[2]/form/div/div[3]/sc-form-field/div/input'
                 WebDriverWait(driver, 20).until(
                     EC.element_to_be_clickable((By.XPATH, categoria_xpath))
                 )
