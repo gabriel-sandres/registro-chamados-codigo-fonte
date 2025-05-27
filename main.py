@@ -1108,7 +1108,7 @@ def preencher_formulario(driver, actions, row, index, df: pd.DataFrame, tentativ
                 )
                 
                 # Mensagem padrão para descrição
-                MENSAGEM_PADRAO = "Registro de atendimento realizado na Plataforma de Atendimento Digital via automação"
+                MENSAGEM_PADRAO = "Chamado registrado via automação"
                 
                 # Verifica se existe observação válida na coluna G
                 observacao = str(row.get('Observação', '')).strip()
@@ -1216,13 +1216,20 @@ def preencher_formulario(driver, actions, row, index, df: pd.DataFrame, tentativ
                     EC.element_to_be_clickable((By.XPATH, categoria_xpath))
                 )
                 print(f"[Linha {index}] ✅ Formulário aberto e pronto para preenchimento")
+                # Força a verificação da tela atual novamente
+                tela_atual = verificar_tela_atual(driver, index)
+                if tela_atual == "formulario":
+                    return preencher_formulario(driver, actions, row, index, df, tentativa + 1)
+                else:
+                    print(f"[Linha {index}] ❌ Formulário não abriu corretamente")
+                    df.at[index, 'Observação'] = "Formulário não abriu corretamente"
+                    df.to_excel(EXCEL_PATH, index=False)
+                    return None
             except Exception as e:
                 print(f"[Linha {index}] ❌ Formulário não abriu corretamente: {str(e)}")
                 df.at[index, 'Observação'] = "Formulário não abriu corretamente"
                 df.to_excel(EXCEL_PATH, index=False)
                 return None
-            
-            return preencher_formulario(driver, actions, row, index, df, tentativa + 1)
 
         elif tela_atual == "consulta":
             print(f"[Linha {index}] Está na tela de consulta. Preenchendo documento...")
