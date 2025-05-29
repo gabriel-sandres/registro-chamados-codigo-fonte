@@ -972,7 +972,8 @@ def preencher_campos_formulario(driver, actions, row, index, df: pd.DataFrame) -
         )
         # Limpa o campo e digita os primeiros caracteres
         campo_tipo.clear()
-        campo_tipo.send_keys("Cha")
+        campo_tipo.click()
+        campo_tipo.send_keys("Cha")  # Primeiras letras de "Chat Receptivo"
         time.sleep(1)
         # Seleciona a opção "Chat Receptivo"
         campo_tipo.send_keys(Keys.ARROW_DOWN)
@@ -988,13 +989,15 @@ def preencher_campos_formulario(driver, actions, row, index, df: pd.DataFrame) -
         )
         # Limpa o campo e digita os primeiros caracteres
         campo_categoria.clear()
-        campo_categoria.send_keys(row['Categoria'][:3])
+        campo_categoria.click()
+        categoria = row['Categoria']
+        campo_categoria.send_keys(categoria[:3])  # Primeiras letras da categoria
         time.sleep(1)
         # Seleciona a opção
         campo_categoria.send_keys(Keys.ARROW_DOWN)
         campo_categoria.send_keys(Keys.ENTER)
         time.sleep(1)
-        print(f"[Linha {index}] Categoria preenchida: {row['Categoria']}")
+        print(f"[Linha {index}] Categoria preenchida: {categoria}")
 
         # Subcategoria
         print(f"[Linha {index}] Preenchendo Subcategoria...")
@@ -1004,7 +1007,8 @@ def preencher_campos_formulario(driver, actions, row, index, df: pd.DataFrame) -
         )
         # Limpa o campo e digita os primeiros caracteres
         campo_subcategoria.clear()
-        campo_subcategoria.send_keys("Api")
+        campo_subcategoria.click()
+        campo_subcategoria.send_keys("Api")  # Primeiras letras de "Api Sicoob"
         time.sleep(1)
         # Seleciona a opção
         campo_subcategoria.send_keys(Keys.ARROW_DOWN)
@@ -1020,8 +1024,9 @@ def preencher_campos_formulario(driver, actions, row, index, df: pd.DataFrame) -
         )
         # Limpa o campo e digita os primeiros caracteres
         campo_servico.clear()
+        campo_servico.click()
         servico_normalizado = normalizar_servico(row['Serviço'])
-        campo_servico.send_keys(servico_normalizado[:3])
+        campo_servico.send_keys(servico_normalizado[:3])  # Primeiras letras do serviço
         time.sleep(1)
         # Seleciona a opção
         campo_servico.send_keys(Keys.ARROW_DOWN)
@@ -1038,7 +1043,8 @@ def preencher_campos_formulario(driver, actions, row, index, df: pd.DataFrame) -
             )
             # Limpa o campo e digita os primeiros caracteres
             select_canal.clear()
-            select_canal.send_keys("não")
+            select_canal.click()
+            select_canal.send_keys("não")  # Primeiras letras de "não se aplica"
             time.sleep(1)
             # Seleciona a opção
             select_canal.send_keys(Keys.ARROW_DOWN)
@@ -1056,6 +1062,7 @@ def preencher_campos_formulario(driver, actions, row, index, df: pd.DataFrame) -
             EC.presence_of_element_located((By.XPATH, protocolo_xpath))
         )
         campo_protocolo.clear()
+        campo_protocolo.click()
         campo_protocolo.send_keys(str(row['Protocolo PLAD']))
         time.sleep(1)
         print(f"[Linha {index}] Protocolo PLAD preenchido: {row['Protocolo PLAD']}")
@@ -1085,6 +1092,7 @@ def preencher_campos_formulario(driver, actions, row, index, df: pd.DataFrame) -
 
         # Limpa o campo e preenche a descrição
         campo_descricao.clear()
+        campo_descricao.click()
         campo_descricao.send_keys(descricao)
         time.sleep(1)
         print(f"[Linha {index}] Descrição preenchida: {descricao[:50]}..." if len(descricao) > 50 else f"[Linha {index}] Descrição preenchida: {descricao}")
@@ -1147,17 +1155,38 @@ def preencher_formulario(driver, actions, row, index, df: pd.DataFrame, tentativ
 
         if tela_atual == "formulario":
             print(f"[Linha {index}] Já está na tela de formulário")
-            # Se já está na tela de formulário (o que não deve acontecer com a mudança), apenas preenche
             return preencher_campos_formulario(driver, actions, row, index, df)
 
         elif tela_atual == "selecao_conta":
             print(f"[Linha {index}] ⚠️ Está na tela de seleção de conta. Tentando selecionar conta...")
+            # Primeiro seleciona a conta
             if not selecionar_conta_por_cooperativa(driver, row['Cooperativa'], index):
                 df.at[index, 'Observação'] = "Falha ao selecionar conta"
                 df.to_excel(EXCEL_PATH, index=False)
                 return None
 
-            # Após selecionar a conta, clica no menu Cobrança
+            # Aguarda um momento para garantir que a conta foi selecionada
+            time.sleep(2)
+
+            # Verifica se a conta foi realmente selecionada
+            select_xpath = '/html/body/div[1]/sc-app/sc-template/sc-root/main/aside/sc-sidebar-container/aside/sc-sidebar/div[2]/div[1]/div/form/div/select'
+            try:
+                select_element = WebDriverWait(driver, 10).until(
+                    EC.presence_of_element_located((By.XPATH, select_xpath))
+                )
+                valor_selecionado = select_element.get_attribute('value')
+                if not valor_selecionado:
+                    print(f"[Linha {index}] ⚠️ Conta não foi selecionada corretamente")
+                    df.at[index, 'Observação'] = "Conta não foi selecionada corretamente"
+                    df.to_excel(EXCEL_PATH, index=False)
+                    return None
+            except Exception as e:
+                print(f"[Linha {index}] ⚠️ Erro ao verificar seleção da conta: {str(e)}")
+                df.at[index, 'Observação'] = f"Erro ao verificar seleção da conta: {str(e)}"
+                df.to_excel(EXCEL_PATH, index=False)
+                return None
+
+            # Após confirmar que a conta foi selecionada, clica no menu Cobrança
             if not clicar_menu_cobranca(driver, index):
                 df.at[index, 'Observação'] = "Falha ao clicar no menu Cobrança"
                 df.to_excel(EXCEL_PATH, index=False)
@@ -1172,7 +1201,6 @@ def preencher_formulario(driver, actions, row, index, df: pd.DataFrame, tentativ
                 df.to_excel(EXCEL_PATH, index=False)
                 return None
 
-            # *** AQUI: Em vez de verificar a tela novamente, vamos direto para o preenchimento do formulário ***
             # Aguarda o campo de categoria do formulário ficar visível/clicável
             try:
                 categoria_xpath = '//*[@id="categoryId"]'
@@ -1180,9 +1208,7 @@ def preencher_formulario(driver, actions, row, index, df: pd.DataFrame, tentativ
                     EC.element_to_be_clickable((By.XPATH, categoria_xpath))
                 )
                 print(f"[Linha {index}] ✅ Formulário aberto e pronto para preenchimento")
-                # Prossegue diretamente para o preenchimento dos campos na tela atual
                 return preencher_campos_formulario(driver, actions, row, index, df)
-
             except Exception as e:
                 print(f"[Linha {index}] ❌ Formulário não abriu corretamente ou campos não apareceram: {str(e)}")
                 df.at[index, 'Observação'] = "Formulário não abriu corretamente ou campos não apareceram"
@@ -1272,32 +1298,8 @@ def preencher_formulario(driver, actions, row, index, df: pd.DataFrame, tentativ
                     tela_atual = verificar_tela_atual(driver, index)
                     if tela_atual == "selecao_conta":
                         print(f"[Linha {index}] ✅ Tela mudou para seleção de conta")
-                        # Após mudar para seleção de conta, clica no menu Cobrança e botão de registro
-                        if not clicar_menu_cobranca(driver, index):
-                            df.at[index, 'Observação'] = "Falha ao clicar no menu Cobrança"
-                            df.to_excel(EXCEL_PATH, index=False)
-                            return None
-
-                        time.sleep(2)
-
-                        if not clicar_botao_registro_chamado(driver, index):
-                            df.at[index, 'Observação'] = "Falha ao clicar no botão de registro de chamado"
-                            df.to_excel(EXCEL_PATH, index=False)
-                            return None
-
-                        # Espera o campo de categoria aparecer e preenche o formulário
-                        try:
-                            categoria_xpath = '//*[@id="categoryId"]'
-                            WebDriverWait(driver, 20).until(
-                                EC.element_to_be_clickable((By.XPATH, categoria_xpath))
-                            )
-                            print(f"[Linha {index}] ✅ Formulário aberto e pronto para preenchimento")
-                            return preencher_campos_formulario(driver, actions, row, index, df)
-                        except Exception as e:
-                            print(f"[Linha {index}] ❌ Formulário não abriu corretamente ou campos não apareceram: {str(e)}")
-                            df.at[index, 'Observação'] = "Formulário não abriu corretamente ou campos não apareceram"
-                            df.to_excel(EXCEL_PATH, index=False)
-                            return None
+                        # Chama a função novamente para processar a tela de seleção de conta
+                        return preencher_formulario(driver, actions, row, index, df)
                     else:
                         print(f"[Linha {index}] ❌ Tela não mudou para seleção de conta após clicar em Abrir")
                         df.at[index, 'Observação'] = "Tela não mudou para seleção de conta após clicar em Abrir"
