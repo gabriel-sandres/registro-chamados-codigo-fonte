@@ -970,23 +970,18 @@ def preencher_campos_formulario(driver, actions, row, index, df: pd.DataFrame) -
         campo_tipo = WebDriverWait(driver, 10).until(
             EC.presence_of_element_located((By.XPATH, tipo_xpath))
         )
-        # Limpa o campo e digita os primeiros caracteres com atraso
-        campo_tipo.clear()
-        campo_tipo.click()
-        texto_tipo = "Chat Receptivo"
-        for char in texto_tipo:
-            campo_tipo.send_keys(char)
-            time.sleep(0.1) # Pequeno atraso entre caracteres
-        
-        # Aguarda dropdown sugerir algo (pode ser <li>, <option>, etc.)
-        WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.XPATH, "//li | //option"))
-        )
-
-        campo_tipo.send_keys(Keys.ARROW_DOWN)
+        # Preenche o valor diretamente via JavaScript e aciona eventos
+        valor_tipo = "Chat Receptivo"
+        driver.execute_script("""
+            arguments[0].value = '';
+            arguments[0].value = arguments[1];
+            arguments[0].dispatchEvent(new Event('input', { bubbles: true }));
+            arguments[0].dispatchEvent(new Event('change', { bubbles: true }));
+        """, campo_tipo, valor_tipo)
+        time.sleep(1)
         campo_tipo.send_keys(Keys.ENTER)
         time.sleep(1)
-        print(f"[Linha {index}] Tipo de atendimento preenchido: {texto_tipo}")
+        print(f"[Linha {index}] Tipo de atendimento preenchido: {valor_tipo}")
 
         # Categoria
         print(f"[Linha {index}] Preenchendo Categoria...")
@@ -994,23 +989,18 @@ def preencher_campos_formulario(driver, actions, row, index, df: pd.DataFrame) -
         campo_categoria = WebDriverWait(driver, 10).until(
             EC.presence_of_element_located((By.XPATH, categoria_xpath))
         )
-        # Limpa o campo e digita os primeiros caracteres com atraso
-        campo_categoria.clear()
-        campo_categoria.click()
-        categoria = row['Categoria']
-        for char in categoria:
-             campo_categoria.send_keys(char)
-             time.sleep(0.1) # Pequeno atraso entre caracteres
-             
-        # Aguarda dropdown sugerir algo (pode ser <li>, <option>, etc.)
-        WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.XPATH, "//li | //option"))
-        )
-
-        campo_categoria.send_keys(Keys.ARROW_DOWN)
+        # Preenche o valor diretamente via JavaScript e aciona eventos
+        valor_categoria = row['Categoria']
+        driver.execute_script("""
+            arguments[0].value = '';
+            arguments[0].value = arguments[1];
+            arguments[0].dispatchEvent(new Event('input', { bubbles: true }));
+            arguments[0].dispatchEvent(new Event('change', { bubbles: true }));
+        """, campo_categoria, valor_categoria)
+        time.sleep(1)
         campo_categoria.send_keys(Keys.ENTER)
         time.sleep(1)
-        print(f"[Linha {index}] Categoria preenchida: {categoria}")
+        print(f"[Linha {index}] Categoria preenchida: {valor_categoria}")
 
         # Subcategoria
         print(f"[Linha {index}] Preenchendo Subcategoria...")
@@ -1018,23 +1008,18 @@ def preencher_campos_formulario(driver, actions, row, index, df: pd.DataFrame) -
         campo_subcategoria = WebDriverWait(driver, 10).until(
             EC.presence_of_element_located((By.XPATH, subcategoria_xpath))
         )
-        # Limpa o campo e digita os primeiros caracteres com atraso
-        campo_subcategoria.clear()
-        campo_subcategoria.click()
-        texto_subcategoria = "Api Sicoob"
-        for char in texto_subcategoria:
-            campo_subcategoria.send_keys(char)
-            time.sleep(0.1) # Pequeno atraso entre caracteres
-            
-        # Aguarda dropdown sugerir algo (pode ser <li>, <option>, etc.)
-        WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.XPATH, "//li | //option"))
-        )
-
-        campo_subcategoria.send_keys(Keys.ARROW_DOWN)
+        # Preenche o valor diretamente via JavaScript e aciona eventos
+        valor_subcategoria = "Api Sicoob"
+        driver.execute_script("""
+            arguments[0].value = '';
+            arguments[0].value = arguments[1];
+            arguments[0].dispatchEvent(new Event('input', { bubbles: true }));
+            arguments[0].dispatchEvent(new Event('change', { bubbles: true }));
+        """, campo_subcategoria, valor_subcategoria)
+        time.sleep(1)
         campo_subcategoria.send_keys(Keys.ENTER)
         time.sleep(1)
-        print(f"[Linha {index}] Subcategoria preenchida: {texto_subcategoria}")
+        print(f"[Linha {index}] Subcategoria preenchida: {valor_subcategoria}")
 
         # Serviço
         print(f"[Linha {index}] Preenchendo Serviço...")
@@ -1042,23 +1027,18 @@ def preencher_campos_formulario(driver, actions, row, index, df: pd.DataFrame) -
         campo_servico = WebDriverWait(driver, 10).until(
             EC.presence_of_element_located((By.XPATH, servico_xpath))
         )
-        # Limpa o campo e digita os primeiros caracteres com atraso
-        campo_servico.clear()
-        campo_servico.click()
-        servico_normalizado = normalizar_servico(row['Serviço'])
-        for char in servico_normalizado:
-            campo_servico.send_keys(char)
-            time.sleep(0.1) # Pequeno atraso entre caracteres
-            
-        # Aguarda dropdown sugerir algo (pode ser <li>, <option>, etc.)
-        WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.XPATH, "//li | //option"))
-        )
-
-        campo_servico.send_keys(Keys.ARROW_DOWN)
+        # Preenche o valor diretamente via JavaScript e aciona eventos
+        valor_servico = normalizar_servico(row['Serviço'])
+        driver.execute_script("""
+            arguments[0].value = '';
+            arguments[0].value = arguments[1];
+            arguments[0].dispatchEvent(new Event('input', { bubbles: true }));
+            arguments[0].dispatchEvent(new Event('change', { bubbles: true }));
+        """, campo_servico, valor_servico)
+        time.sleep(1)
         campo_servico.send_keys(Keys.ENTER)
         time.sleep(1)
-        print(f"[Linha {index}] Serviço preenchido: {servico_normalizado}")
+        print(f"[Linha {index}] Serviço preenchido: {valor_servico}")
 
         # Canal de autoatendimento
         print(f"[Linha {index}] Preenchendo Canal de autoatendimento...")
@@ -1067,23 +1047,18 @@ def preencher_campos_formulario(driver, actions, row, index, df: pd.DataFrame) -
             select_canal = WebDriverWait(driver, 10).until(
                 EC.presence_of_element_located((By.XPATH, canal_xpath))
             )
-            # Limpa o campo e digita os primeiros caracteres com atraso
-            select_canal.clear()
-            select_canal.click()
-            texto_canal = "não se aplica"
-            for char in texto_canal:
-                select_canal.send_keys(char)
-                time.sleep(0.1) # Pequeno atraso entre caracteres
-                
-            # Aguarda dropdown sugerir algo (pode ser <li>, <option>, etc.)
-            WebDriverWait(driver, 10).until(
-                EC.presence_of_element_located((By.XPATH, "//li | //option"))
-            )
-
-            select_canal.send_keys(Keys.ARROW_DOWN)
+            # Preenche o valor diretamente via JavaScript e aciona eventos
+            valor_canal = "não se aplica"
+            driver.execute_script("""
+                arguments[0].value = '';
+                arguments[0].value = arguments[1];
+                arguments[0].dispatchEvent(new Event('input', { bubbles: true }));
+                arguments[0].dispatchEvent(new Event('change', { bubbles: true }));
+            """, select_canal, valor_canal)
+            time.sleep(1)
             select_canal.send_keys(Keys.ENTER)
             time.sleep(1)
-            print(f"[Linha {index}] Canal de autoatendimento selecionado: {texto_canal}")
+            print(f"[Linha {index}] Canal de autoatendimento selecionado: {valor_canal}")
         except Exception as e:
             print(f"[Linha {index}] ⚠️ Campo Canal de autoatendimento não encontrado: {str(e)}")
             # Continua mesmo se não encontrar o campo
@@ -1094,6 +1069,7 @@ def preencher_campos_formulario(driver, actions, row, index, df: pd.DataFrame) -
         campo_protocolo = WebDriverWait(driver, 10).until(
             EC.presence_of_element_located((By.XPATH, protocolo_xpath))
         )
+        # Este campo não parece ter autocomplete complexo, mantendo send_keys
         campo_protocolo.clear()
         campo_protocolo.click()
         campo_protocolo.send_keys(str(row['Protocolo PLAD']))
@@ -1124,6 +1100,7 @@ def preencher_campos_formulario(driver, actions, row, index, df: pd.DataFrame) -
             descricao = observacao
 
         # Limpa o campo e preenche a descrição
+        # Este campo não parece ter autocomplete complexo, mantendo send_keys
         campo_descricao.clear()
         campo_descricao.click()
         campo_descricao.send_keys(descricao)
