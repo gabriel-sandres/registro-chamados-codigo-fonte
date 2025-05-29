@@ -970,16 +970,23 @@ def preencher_campos_formulario(driver, actions, row, index, df: pd.DataFrame) -
         campo_tipo = WebDriverWait(driver, 10).until(
             EC.presence_of_element_located((By.XPATH, tipo_xpath))
         )
-        # Limpa o campo e digita os primeiros caracteres
+        # Limpa o campo e digita os primeiros caracteres com atraso
         campo_tipo.clear()
         campo_tipo.click()
-        campo_tipo.send_keys("Cha")  # Primeiras letras de "Chat Receptivo"
-        time.sleep(1)
-        # Seleciona a opção "Chat Receptivo"
+        texto_tipo = "Chat Receptivo"
+        for char in texto_tipo:
+            campo_tipo.send_keys(char)
+            time.sleep(0.1) # Pequeno atraso entre caracteres
+        
+        # Aguarda dropdown sugerir algo (pode ser <li>, <option>, etc.)
+        WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.XPATH, "//li | //option"))
+        )
+
         campo_tipo.send_keys(Keys.ARROW_DOWN)
         campo_tipo.send_keys(Keys.ENTER)
         time.sleep(1)
-        print(f"[Linha {index}] Tipo de atendimento preenchido: Chat Receptivo")
+        print(f"[Linha {index}] Tipo de atendimento preenchido: {texto_tipo}")
 
         # Categoria
         print(f"[Linha {index}] Preenchendo Categoria...")
@@ -987,13 +994,19 @@ def preencher_campos_formulario(driver, actions, row, index, df: pd.DataFrame) -
         campo_categoria = WebDriverWait(driver, 10).until(
             EC.presence_of_element_located((By.XPATH, categoria_xpath))
         )
-        # Limpa o campo e digita os primeiros caracteres
+        # Limpa o campo e digita os primeiros caracteres com atraso
         campo_categoria.clear()
         campo_categoria.click()
         categoria = row['Categoria']
-        campo_categoria.send_keys(categoria[:3])  # Primeiras letras da categoria
-        time.sleep(1)
-        # Seleciona a opção
+        for char in categoria:
+             campo_categoria.send_keys(char)
+             time.sleep(0.1) # Pequeno atraso entre caracteres
+             
+        # Aguarda dropdown sugerir algo (pode ser <li>, <option>, etc.)
+        WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.XPATH, "//li | //option"))
+        )
+
         campo_categoria.send_keys(Keys.ARROW_DOWN)
         campo_categoria.send_keys(Keys.ENTER)
         time.sleep(1)
@@ -1005,16 +1018,23 @@ def preencher_campos_formulario(driver, actions, row, index, df: pd.DataFrame) -
         campo_subcategoria = WebDriverWait(driver, 10).until(
             EC.presence_of_element_located((By.XPATH, subcategoria_xpath))
         )
-        # Limpa o campo e digita os primeiros caracteres
+        # Limpa o campo e digita os primeiros caracteres com atraso
         campo_subcategoria.clear()
         campo_subcategoria.click()
-        campo_subcategoria.send_keys("Api")  # Primeiras letras de "Api Sicoob"
-        time.sleep(1)
-        # Seleciona a opção
+        texto_subcategoria = "Api Sicoob"
+        for char in texto_subcategoria:
+            campo_subcategoria.send_keys(char)
+            time.sleep(0.1) # Pequeno atraso entre caracteres
+            
+        # Aguarda dropdown sugerir algo (pode ser <li>, <option>, etc.)
+        WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.XPATH, "//li | //option"))
+        )
+
         campo_subcategoria.send_keys(Keys.ARROW_DOWN)
         campo_subcategoria.send_keys(Keys.ENTER)
         time.sleep(1)
-        print(f"[Linha {index}] Subcategoria preenchida: Api Sicoob")
+        print(f"[Linha {index}] Subcategoria preenchida: {texto_subcategoria}")
 
         # Serviço
         print(f"[Linha {index}] Preenchendo Serviço...")
@@ -1022,13 +1042,19 @@ def preencher_campos_formulario(driver, actions, row, index, df: pd.DataFrame) -
         campo_servico = WebDriverWait(driver, 10).until(
             EC.presence_of_element_located((By.XPATH, servico_xpath))
         )
-        # Limpa o campo e digita os primeiros caracteres
+        # Limpa o campo e digita os primeiros caracteres com atraso
         campo_servico.clear()
         campo_servico.click()
         servico_normalizado = normalizar_servico(row['Serviço'])
-        campo_servico.send_keys(servico_normalizado[:3])  # Primeiras letras do serviço
-        time.sleep(1)
-        # Seleciona a opção
+        for char in servico_normalizado:
+            campo_servico.send_keys(char)
+            time.sleep(0.1) # Pequeno atraso entre caracteres
+            
+        # Aguarda dropdown sugerir algo (pode ser <li>, <option>, etc.)
+        WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.XPATH, "//li | //option"))
+        )
+
         campo_servico.send_keys(Keys.ARROW_DOWN)
         campo_servico.send_keys(Keys.ENTER)
         time.sleep(1)
@@ -1041,16 +1067,23 @@ def preencher_campos_formulario(driver, actions, row, index, df: pd.DataFrame) -
             select_canal = WebDriverWait(driver, 10).until(
                 EC.presence_of_element_located((By.XPATH, canal_xpath))
             )
-            # Limpa o campo e digita os primeiros caracteres
+            # Limpa o campo e digita os primeiros caracteres com atraso
             select_canal.clear()
             select_canal.click()
-            select_canal.send_keys("não")  # Primeiras letras de "não se aplica"
-            time.sleep(1)
-            # Seleciona a opção
+            texto_canal = "não se aplica"
+            for char in texto_canal:
+                select_canal.send_keys(char)
+                time.sleep(0.1) # Pequeno atraso entre caracteres
+                
+            # Aguarda dropdown sugerir algo (pode ser <li>, <option>, etc.)
+            WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located((By.XPATH, "//li | //option"))
+            )
+
             select_canal.send_keys(Keys.ARROW_DOWN)
             select_canal.send_keys(Keys.ENTER)
             time.sleep(1)
-            print(f"[Linha {index}] Canal de autoatendimento selecionado: não se aplica")
+            print(f"[Linha {index}] Canal de autoatendimento selecionado: {texto_canal}")
         except Exception as e:
             print(f"[Linha {index}] ⚠️ Campo Canal de autoatendimento não encontrado: {str(e)}")
             # Continua mesmo se não encontrar o campo
