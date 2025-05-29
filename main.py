@@ -413,7 +413,7 @@ def selecionar_conta_por_cooperativa(driver, cooperativa, index):
         
         # Rola até o elemento para garantir que está visível
         driver.execute_script("arguments[0].scrollIntoView(true);", select_element)
-        time.sleep(1)  # Pequena pausa para garantir que a rolagem terminou
+        time.sleep(1)
         
         # Tenta clicar no select primeiro
         try:
@@ -442,33 +442,30 @@ def selecionar_conta_por_cooperativa(driver, cooperativa, index):
                 if f"Coop: {cooperativa}" in texto_opcao:
                     print(f"[Linha {index}] Conta encontrada: {texto_opcao}")
                     try:
-                        # Tenta clicar na opção
-                        option.click()
-                    except ElementClickInterceptedException:
-                        try:
-                            # Tenta clicar via JavaScript
-                            driver.execute_script("arguments[0].click();", option)
-                        except:
-                            # Tenta via ActionChains
-                            actions = ActionChains(driver)
-                            actions.move_to_element(option).click().perform()
-                    
-                    # Aguarda um momento para a seleção ser processada
-                    time.sleep(2)
-                    
-                    # Tenta selecionar via Select
-                    try:
+                        # Tenta selecionar via Select
                         select = Select(select_element)
                         select.select_by_visible_text(texto_opcao)
+                        time.sleep(2)
+                        
+                        # Verifica se a seleção foi bem sucedida
+                        valor_selecionado = select_element.get_attribute('value')
+                        if valor_selecionado:
+                            print(f"[Linha {index}] ✅ Conta selecionada com sucesso")
+                            return True
                     except:
-                        pass
-                    
-                    # Tenta selecionar via JavaScript
-                    try:
-                        driver.execute_script(f"arguments[0].value = '{option.get_attribute('value')}';", select_element)
-                        driver.execute_script("arguments[0].dispatchEvent(new Event('change', { bubbles: true }));", select_element)
-                    except:
-                        pass
+                        # Se falhar, tenta via JavaScript
+                        try:
+                            driver.execute_script(f"arguments[0].value = '{option.get_attribute('value')}';", select_element)
+                            driver.execute_script("arguments[0].dispatchEvent(new Event('change', { bubbles: true }));", select_element)
+                            time.sleep(2)
+                            
+                            # Verifica se a seleção foi bem sucedida
+                            valor_selecionado = select_element.get_attribute('value')
+                            if valor_selecionado:
+                                print(f"[Linha {index}] ✅ Conta selecionada com sucesso via JavaScript")
+                                return True
+                        except:
+                            print(f"[Linha {index}] ⚠️ Falha ao selecionar conta via JavaScript")
                     
                     conta_encontrada = True
                     break
@@ -480,53 +477,20 @@ def selecionar_conta_por_cooperativa(driver, cooperativa, index):
             print(f"[Linha {index}] ⚠️ ATENÇÃO: Nenhuma conta encontrada para cooperativa {cooperativa}")
             return False
             
-        # Verifica se a conta foi realmente selecionada
-        time.sleep(2)  # Pequena pausa para garantir que a seleção foi processada
+        # Aguarda um momento para garantir que a seleção foi processada
+        time.sleep(2)
         
-        # Tenta diferentes métodos para verificar a seleção
+        # Verifica se a conta foi realmente selecionada
         try:
-            # Método 1: Verificar o texto do select
-            texto_selecionado = select_element.text.strip()
-            print(f"[Linha {index}] Texto do select: {texto_selecionado}")
-            
-            # Método 2: Verificar a opção selecionada
-            selected_option = select_element.find_element(By.XPATH, "./option[@selected]")
-            texto_selecionado = selected_option.text.strip()
-            print(f"[Linha {index}] Opção selecionada: {texto_selecionado}")
-            
-            # Método 3: Verificar o valor do select
             valor_selecionado = select_element.get_attribute('value')
-            print(f"[Linha {index}] Valor selecionado: {valor_selecionado}")
-            
-            # Se qualquer um dos métodos indicar que a cooperativa está selecionada, considera sucesso
-            if (f"Coop: {cooperativa}" in texto_selecionado or 
-                f"Coop: {cooperativa}" in select_element.text or 
-                valor_selecionado and valor_selecionado != ""):
+            if valor_selecionado:
                 print(f"[Linha {index}] ✅ Conta selecionada com sucesso")
                 return True
             else:
-                print(f"[Linha {index}] ⚠️ Conta selecionada não corresponde à cooperativa {cooperativa}")
+                print(f"[Linha {index}] ⚠️ Conta não foi selecionada corretamente")
                 return False
-                
-        except NoSuchElementException:
-            print(f"[Linha {index}] ⚠️ Não foi possível verificar a conta selecionada")
-            return False
-            
-        # Espera o spinner desaparecer após a seleção
-        if not esperar_spinner_desaparecer(driver, index):
-            print(f"[Linha {index}] ⚠️ Spinner não desapareceu após seleção da conta")
-            return False
-        
-        # Aguarda a tela mudar para a tela de formulário
-        try:
-            print(f"[Linha {index}] Aguardando mudança para tela de formulário...")
-            WebDriverWait(driver, 10).until(
-                EC.presence_of_element_located((By.XPATH, "//form"))
-            )
-            print(f"[Linha {index}] ✅ Tela de formulário carregada")
-            return True
-        except TimeoutException:
-            print(f"[Linha {index}] ⚠️ Timeout ao aguardar tela de formulário")
+        except Exception as e:
+            print(f"[Linha {index}] ⚠️ Erro ao verificar seleção da conta: {str(e)}")
             return False
             
     except Exception as e:
@@ -1006,12 +970,13 @@ def preencher_campos_formulario(driver, actions, row, index, df: pd.DataFrame) -
         campo_tipo = WebDriverWait(driver, 10).until(
             EC.presence_of_element_located((By.XPATH, tipo_xpath))
         )
-        driver.execute_script("""
-            arguments[0].value = '';
-            arguments[0].value = arguments[1];
-            arguments[0].dispatchEvent(new Event('input', { bubbles: true }));
-            arguments[0].dispatchEvent(new Event('change', { bubbles: true }));
-        """, campo_tipo, 'Chat Receptivo')
+        # Limpa o campo e digita os primeiros caracteres
+        campo_tipo.clear()
+        campo_tipo.send_keys("Cha")
+        time.sleep(1)
+        # Seleciona a opção "Chat Receptivo"
+        campo_tipo.send_keys(Keys.ARROW_DOWN)
+        campo_tipo.send_keys(Keys.ENTER)
         time.sleep(1)
         print(f"[Linha {index}] Tipo de atendimento preenchido: Chat Receptivo")
 
@@ -1021,12 +986,13 @@ def preencher_campos_formulario(driver, actions, row, index, df: pd.DataFrame) -
         campo_categoria = WebDriverWait(driver, 10).until(
             EC.presence_of_element_located((By.XPATH, categoria_xpath))
         )
-        driver.execute_script("""
-            arguments[0].value = '';
-            arguments[0].value = arguments[1];
-            arguments[0].dispatchEvent(new Event('input', { bubbles: true }));
-            arguments[0].dispatchEvent(new Event('change', { bubbles: true }));
-        """, campo_categoria, row['Categoria'])
+        # Limpa o campo e digita os primeiros caracteres
+        campo_categoria.clear()
+        campo_categoria.send_keys(row['Categoria'][:3])
+        time.sleep(1)
+        # Seleciona a opção
+        campo_categoria.send_keys(Keys.ARROW_DOWN)
+        campo_categoria.send_keys(Keys.ENTER)
         time.sleep(1)
         print(f"[Linha {index}] Categoria preenchida: {row['Categoria']}")
 
@@ -1036,12 +1002,13 @@ def preencher_campos_formulario(driver, actions, row, index, df: pd.DataFrame) -
         campo_subcategoria = WebDriverWait(driver, 10).until(
             EC.presence_of_element_located((By.XPATH, subcategoria_xpath))
         )
-        driver.execute_script("""
-            arguments[0].value = '';
-            arguments[0].value = arguments[1];
-            arguments[0].dispatchEvent(new Event('input', { bubbles: true }));
-            arguments[0].dispatchEvent(new Event('change', { bubbles: true }));
-        """, campo_subcategoria, 'Api Sicoob')
+        # Limpa o campo e digita os primeiros caracteres
+        campo_subcategoria.clear()
+        campo_subcategoria.send_keys("Api")
+        time.sleep(1)
+        # Seleciona a opção
+        campo_subcategoria.send_keys(Keys.ARROW_DOWN)
+        campo_subcategoria.send_keys(Keys.ENTER)
         time.sleep(1)
         print(f"[Linha {index}] Subcategoria preenchida: Api Sicoob")
 
@@ -1051,25 +1018,36 @@ def preencher_campos_formulario(driver, actions, row, index, df: pd.DataFrame) -
         campo_servico = WebDriverWait(driver, 10).until(
             EC.presence_of_element_located((By.XPATH, servico_xpath))
         )
-        driver.execute_script("""
-            arguments[0].value = '';
-            arguments[0].value = arguments[1];
-            arguments[0].dispatchEvent(new Event('input', { bubbles: true }));
-            arguments[0].dispatchEvent(new Event('change', { bubbles: true }));
-        """, campo_servico, normalizar_servico(row['Serviço']))
+        # Limpa o campo e digita os primeiros caracteres
+        campo_servico.clear()
+        servico_normalizado = normalizar_servico(row['Serviço'])
+        campo_servico.send_keys(servico_normalizado[:3])
         time.sleep(1)
-        print(f"[Linha {index}] Serviço preenchido: {normalizar_servico(row['Serviço'])}")
+        # Seleciona a opção
+        campo_servico.send_keys(Keys.ARROW_DOWN)
+        campo_servico.send_keys(Keys.ENTER)
+        time.sleep(1)
+        print(f"[Linha {index}] Serviço preenchido: {servico_normalizado}")
 
         # Canal de autoatendimento
         print(f"[Linha {index}] Preenchendo Canal de autoatendimento...")
         canal_xpath = '//*[@id="Canal De Autoatendimento"]'
-        select_canal = WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.XPATH, canal_xpath))
-        )
-        select = Select(select_canal)
-        select.select_by_value("não se aplica")
-        time.sleep(1)
-        print(f"[Linha {index}] Canal de autoatendimento selecionado: não se aplica")
+        try:
+            select_canal = WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located((By.XPATH, canal_xpath))
+            )
+            # Limpa o campo e digita os primeiros caracteres
+            select_canal.clear()
+            select_canal.send_keys("não")
+            time.sleep(1)
+            # Seleciona a opção
+            select_canal.send_keys(Keys.ARROW_DOWN)
+            select_canal.send_keys(Keys.ENTER)
+            time.sleep(1)
+            print(f"[Linha {index}] Canal de autoatendimento selecionado: não se aplica")
+        except Exception as e:
+            print(f"[Linha {index}] ⚠️ Campo Canal de autoatendimento não encontrado: {str(e)}")
+            # Continua mesmo se não encontrar o campo
 
         # Protocolo PLAD
         print(f"[Linha {index}] Preenchendo Protocolo PLAD...")
@@ -1077,12 +1055,8 @@ def preencher_campos_formulario(driver, actions, row, index, df: pd.DataFrame) -
         campo_protocolo = WebDriverWait(driver, 10).until(
             EC.presence_of_element_located((By.XPATH, protocolo_xpath))
         )
-        driver.execute_script("""
-            arguments[0].value = '';
-            arguments[0].value = arguments[1];
-            arguments[0].dispatchEvent(new Event('input', { bubbles: true }));
-            arguments[0].dispatchEvent(new Event('change', { bubbles: true }));
-        """, campo_protocolo, str(row['Protocolo PLAD']))
+        campo_protocolo.clear()
+        campo_protocolo.send_keys(str(row['Protocolo PLAD']))
         time.sleep(1)
         print(f"[Linha {index}] Protocolo PLAD preenchido: {row['Protocolo PLAD']}")
 
@@ -1109,38 +1083,21 @@ def preencher_campos_formulario(driver, actions, row, index, df: pd.DataFrame) -
         else:
             descricao = observacao
 
-        # Limpa o campo e define o valor usando JavaScript
-        driver.execute_script("""
-            arguments[0].value = '';
-            arguments[0].value = arguments[1];
-            arguments[0].dispatchEvent(new Event('input', { bubbles: true }));
-            arguments[0].dispatchEvent(new Event('change', { bubbles: true }));
-        """, campo_descricao, descricao)
-
-        # Aguarda um momento para garantir que o valor foi preenchido
+        # Limpa o campo e preenche a descrição
+        campo_descricao.clear()
+        campo_descricao.send_keys(descricao)
         time.sleep(1)
-
-        # Verifica se o campo foi preenchido corretamente
-        valor_preenchido = campo_descricao.get_attribute('value')
-        if not valor_preenchido:
-            print(f"[Linha {index}] ⚠️ Campo descrição não preenchido, tentando novamente...")
-            # Tenta preencher novamente usando JavaScript
-            driver.execute_script(f"arguments[0].value = '{descricao}';", campo_descricao)
-            driver.execute_script("arguments[0].dispatchEvent(new Event('input', { bubbles: true }));", campo_descricao)
-            driver.execute_script("arguments[0].dispatchEvent(new Event('change', { bubbles: true }));", campo_descricao)
-            time.sleep(1)
-
         print(f"[Linha {index}] Descrição preenchida: {descricao[:50]}..." if len(descricao) > 50 else f"[Linha {index}] Descrição preenchida: {descricao}")
-        time.sleep(1)
 
         # Aguarda o botão Registrar ficar habilitado e clica nele
         print(f"[Linha {index}] Aguardando botão Registrar ficar habilitado...")
         registrar_xpath = '//*[@id="actionbar hide"]/div/div[2]/form/div/div[20]/sc-button/button'
-        # Espera até o botão ficar clicável (não estar disabled)
-        WebDriverWait(driver, 30).until(
-            lambda d: not d.find_element(By.XPATH, registrar_xpath).get_attribute("disabled")
+        botao_registrar = WebDriverWait(driver, 30).until(
+            lambda d: d.find_element(By.XPATH, registrar_xpath)
         )
-        botao_registrar = driver.find_element(By.XPATH, registrar_xpath)
+        WebDriverWait(driver, 30).until(
+            lambda d: not botao_registrar.get_attribute("disabled")
+        )
         botao_registrar.click()
         print(f"[Linha {index}] Botão Registrar clicado")
         time.sleep(2)
@@ -1161,7 +1118,6 @@ def preencher_campos_formulario(driver, actions, row, index, df: pd.DataFrame) -
         elemento_protocolo = WebDriverWait(driver, 10).until(
             EC.presence_of_element_located((By.XPATH, protocolo_xpath))
         )
-        # Extrai o texto e remove espaços em branco
         numero_protocolo = elemento_protocolo.text.strip()
         print(f"[Linha {index}] Protocolo capturado: {numero_protocolo}")
 
