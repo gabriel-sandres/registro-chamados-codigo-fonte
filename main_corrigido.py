@@ -840,7 +840,7 @@ def preencher_formulario(driver, actions, row, index, df: pd.DataFrame, tentativ
                         df.to_excel(EXCEL_PATH, index=False)
                         return None
                     
-                    if verificar_pessoa_nao_encontrshuarda_documento(driver, index):
+                    if verificar_pessoa_nao_encontrada_documento(driver, index):
                         df.at[index, 'Observação'] = "Pessoa não encontrada"
                         df.to_excel(EXCEL_PATH, index=False)
                         return None
