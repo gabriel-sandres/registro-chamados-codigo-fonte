@@ -17,17 +17,6 @@ import time
 import logging
 import traceback
 from typing import Optional, Tuple
-
-# === Função para validar campos com ng-valid ===
-def aguardar_validacao(driver, campo, index, nome_campo):
-    try:
-        WebDriverWait(driver, 10).until(
-            lambda d: "ng-valid" in campo.get_attribute("class")
-        )
-        print(f"[Linha {index}] Campo '{nome_campo}' validado com sucesso (ng-valid)")
-    except TimeoutException:
-        print(f"[Linha {index}] ⚠️ Campo '{nome_campo}' pode não estar validado (timeout para ng-valid)")
-
 from selenium.common.exceptions import TimeoutException, NoSuchElementException, ElementClickInterceptedException
 
 # === CONFIGURAÇÃO DE LOGGING ===
@@ -156,11 +145,10 @@ def login(driver: webdriver.Chrome, username: str, password: str, max_tentativas
             
             # Verifica se está realmente logado
             try:
-                # Tenta encontrar elementos que só existem quando logado
                 elementos_logado = [
-                    "//sc-sidebar-container",  # Sidebar do sistema
-                    "//sc-app",  # Container principal do app
-                    "//sc-template"  # Template do sistema
+                    "//sc-sidebar-container",
+                    "//sc-app",
+                    "//sc-template"
                 ]
                 
                 for elemento in elementos_logado:
@@ -171,7 +159,6 @@ def login(driver: webdriver.Chrome, username: str, password: str, max_tentativas
                     except TimeoutException:
                         raise NoSuchElementException(f"Elemento {elemento} não encontrado")
                 
-                # Se chegou aqui, está logado
                 logger.info("✅ Verificação de login bem-sucedida")
                 return True
                 
@@ -206,11 +193,9 @@ def login(driver: webdriver.Chrome, username: str, password: str, max_tentativas
                         )
                         
                         # Verifica novamente se está logado
-                        time.sleep(5)  # Aguarda um pouco para garantir que a página carregou
-                        for elemento in elementos_logado:
-                            WebDriverWait(driver, 30).until(
-                                EC.presence_of_element_located((By.XPATH, elemento))
-                            )
+                        WebDriverWait(driver, 30).until(
+                            EC.presence_of_element_located((By.XPATH, elementos_logado[0]))
+                        )
                         
                         logger.info("✅ Login realizado com sucesso!")
                         return True
@@ -261,31 +246,30 @@ def limpar_e_preencher(campo, valor):
     campo.send_keys(Keys.DELETE)
     campo.send_keys(valor)
 
-# Modificado para lidar com cliques interceptados e garantir interação
 def preencher_com_sugestao(campo, valor, driver):
     try:
-        # Garantir que o campo esteja clicável
         WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.ID, campo.get_attribute("id"))))
-        # Usar ActionChains para clicar
         actions = ActionChains(driver)
         actions.move_to_element(campo).click().perform()
         
-        campo.clear()  # Limpar qualquer valor pré-existente
-        # Digita os primeiros caracteres para acionar a lista
+        campo.clear()
         campo.send_keys(valor[:3])
         WebDriverWait(driver, 10).until(
             EC.presence_of_element_located((By.XPATH, f"//option[contains(text(), '{valor}')] | //li[contains(text(), '{valor}')]"))
         )
-        # Simula navegação pela lista
         campo.send_keys(Keys.ARROW_DOWN)
         campo.send_keys(Keys.ENTER)
+        
+        # Verifica se o campo foi preenchido corretamente (ng-valid)
+        WebDriverWait(driver, 10).until(
+            lambda d: 'ng-valid' in d.find_element(By.ID, campo.get_attribute("id")).get_attribute('class').split()
+        )
     except TimeoutException as e:
-        raise FormularioError(f"Timeout ao localizar sugestão para '{valor}': {str(e)}")
+        raise FormularioError(f"Timeout ao localizar sugestão para '{valor}' ou validar preenchimento: {str(e)}")
     except NoSuchElementException as e:
         raise FormularioError(f"Sugestão para '{valor}' não encontrada: {str(e)}")
     except ElementClickInterceptedException as e:
         logger.warning(f"Clique interceptado ao preencher '{valor}': {str(e)}")
-        # Tenta clicar via JavaScript
         driver.execute_script("arguments[0].click();", campo)
         campo.clear()
         campo.send_keys(valor[:3])
@@ -294,6 +278,9 @@ def preencher_com_sugestao(campo, valor, driver):
         )
         campo.send_keys(Keys.ARROW_DOWN)
         campo.send_keys(Keys.ENTER)
+        WebDriverWait(driver, 10).until(
+            lambda d: 'ng-valid' in d.find_element(By.ID, campo.get_attribute("id")).get_attribute('class').split()
+        )
     except Exception as e:
         raise FormularioError(f"Erro ao preencher sugestão para '{valor}': {str(e)}")
 
@@ -380,6 +367,10 @@ def selecionar_opcao_select(driver, select_xpath, valor):
         except NoSuchElementException:
             select.select_by_value(valor.lower())
         
+        # Verifica se a opção foi selecionada corretamente
+        WebDriverWait(driver, 10).until(
+            lambda d: 'ng-valid' in d.find_element(By.XPATH, select_xpath).get_attribute('class').split()
+        )
         print(f"Opção '{valor}' selecionada no select")
         
     except TimeoutException as e:
@@ -393,6 +384,9 @@ def selecionar_opcao_select(driver, select_xpath, valor):
                 if option.text.lower() == valor.lower() or option.get_attribute("value").lower() == valor.lower():
                     driver.execute_script("arguments[0].selected = true;", option)
                     driver.execute_script("arguments[0].dispatchEvent(new Event('change', { bubbles: true }));", select_element)
+                    WebDriverWait(driver, 10).until(
+                        lambda d: 'ng-valid' in d.find_element(By.XPATH, select_xpath).get_attribute('class').split()
+                    )
                     print(f"Opção '{valor}' selecionada via JavaScript")
                     return
             raise FormularioError(f"Opção '{valor}' não encontrada no select: {str(e)}")
@@ -408,100 +402,36 @@ def selecionar_conta_por_cooperativa(driver, cooperativa, index):
         print(f"[Linha {index}] Selecionando conta para cooperativa {cooperativa}...")
         select_xpath = '/html/body/div[1]/sc-app/sc-template/sc-root/main/aside/sc-sidebar-container/aside/sc-sidebar/div[2]/div[1]/div/form/div/select'
         
-        # Espera o spinner desaparecer antes de tentar selecionar a conta
         if not esperar_spinner_desaparecer(driver, index):
             print(f"[Linha {index}] ⚠️ Spinner não desapareceu a tempo")
             return False
         
-        # Espera o select estar presente e clicável
-        try:
-            select_element = WebDriverWait(driver, 30).until(
-                EC.element_to_be_clickable((By.XPATH, select_xpath))
-            )
-        except TimeoutException:
-            print(f"[Linha {index}] ⚠️ Timeout ao aguardar select de conta")
-            return False
+        select_element = WebDriverWait(driver, 30).until(
+            EC.element_to_be_clickable((By.XPATH, select_xpath))
+        )
         
-        # Rola até o elemento para garantir que está visível
         driver.execute_script("arguments[0].scrollIntoView(true);", select_element)
-        time.sleep(1)
         
-        # Tenta clicar no select primeiro
         try:
             select_element.click()
         except ElementClickInterceptedException:
-            try:
-                driver.execute_script("arguments[0].click();", select_element)
-            except:
-                actions = ActionChains(driver)
-                actions.move_to_element(select_element).click().perform()
+            driver.execute_script("arguments[0].click();", select_element)
         
-        # Espera as opções aparecerem
-        time.sleep(1)
-        
-        try:
-            options = select_element.find_elements(By.TAG_NAME, 'option')
-        except NoSuchElementException:
-            print(f"[Linha {index}] ⚠️ Não foi possível encontrar as opções do select")
-            return False
-        
+        options = select_element.find_elements(By.TAG_NAME, 'option')
         conta_encontrada = False
         for option in options:
-            try:
-                texto_opcao = option.text.strip()
-                # Verifica se o texto da opção contém a cooperativa
-                if f"Coop: {cooperativa}" in texto_opcao:
-                    print(f"[Linha {index}] Conta encontrada: {texto_opcao}")
-                    try:
-                        # Tenta selecionar via Select
-                        select = Select(select_element)
-                        select.select_by_visible_text(texto_opcao)
-                        time.sleep(2)
-                        
-                        # Verifica se a seleção foi bem sucedida
-                        valor_selecionado = select_element.get_attribute('value')
-                        if valor_selecionado:
-                            print(f"[Linha {index}] ✅ Conta selecionada com sucesso")
-                            return True
-                    except:
-                        # Se falhar, tenta via JavaScript
-                        try:
-                            driver.execute_script(f"arguments[0].value = '{option.get_attribute('value')}';", select_element)
-                            driver.execute_script("arguments[0].dispatchEvent(new Event('change', { bubbles: true }));", select_element)
-                            time.sleep(2)
-                            
-                            # Verifica se a seleção foi bem sucedida
-                            valor_selecionado = select_element.get_attribute('value')
-                            if valor_selecionado:
-                                print(f"[Linha {index}] ✅ Conta selecionada com sucesso via JavaScript")
-                                return True
-                        except:
-                            print(f"[Linha {index}] ⚠️ Falha ao selecionar conta via JavaScript")
-                    
-                    conta_encontrada = True
-                    break
-            except Exception as e:
-                print(f"[Linha {index}] ⚠️ Erro ao processar opção: {str(e)}")
-                continue
-        
-        if not conta_encontrada:
-            print(f"[Linha {index}] ⚠️ ATENÇÃO: Nenhuma conta encontrada para cooperativa {cooperativa}")
-            return False
-            
-        # Aguarda um momento para garantir que a seleção foi processada
-        time.sleep(2)
-        
-        # Verifica se a conta foi realmente selecionada
-        try:
-            valor_selecionado = select_element.get_attribute('value')
-            if valor_selecionado:
+            texto_opcao = option.text.strip()
+            if f"Coop: {cooperativa}" in texto_opcao:
+                print(f"[Linha {index}] Conta encontrada: {texto_opcao}")
+                select = Select(select_element)
+                select.select_by_visible_text(texto_opcao)
+                WebDriverWait(driver, 10).until(
+                    lambda d: d.find_element(By.XPATH, select_xpath).get_attribute('value')
+                )
                 print(f"[Linha {index}] ✅ Conta selecionada com sucesso")
                 return True
-            else:
-                print(f"[Linha {index}] ⚠️ Conta não foi selecionada corretamente")
-                return False
-        except Exception as e:
-            print(f"[Linha {index}] ⚠️ Erro ao verificar seleção da conta: {str(e)}")
+        if not conta_encontrada:
+            print(f"[Linha {index}] ⚠️ ATENÇÃO: Nenhuma conta encontrada para cooperativa {cooperativa}")
             return False
             
     except Exception as e:
@@ -511,7 +441,6 @@ def selecionar_conta_por_cooperativa(driver, cooperativa, index):
 def verificar_pessoa_nao_encontrada(driver, index):
     try:
         erro_xpath = '/html/body/div[1]/sc-app/sc-template/sc-root/main/section/sc-content/sc-consult/div/div[2]/div/sc-card-content/div/main/form/div/div[4]/sc-card/div/sc-card-content/div/div/div[1]/h6'
-        
         elementos_erro = driver.find_elements(By.XPATH, erro_xpath)
         if elementos_erro:
             mensagem_erro = elementos_erro[0].text.strip()
@@ -519,7 +448,6 @@ def verificar_pessoa_nao_encontrada(driver, index):
                 print(f"[Linha {index}] ⚠️ ERRO: {mensagem_erro}")
                 return True
         return False
-        
     except Exception as e:
         print(f"[Linha {index}] Erro ao verificar pessoa não encontrada: {e}")
         return False
@@ -560,14 +488,10 @@ def esperar_spinner_desaparecer(driver, index, timeout=30, check_interval=1):
             except NoSuchElementException:
                 print(f"[Linha {index}] ✅ Spinner não encontrado")
                 return True
-            except Exception as e:
-                print(f"[Linha {index}] ⚠️ Erro ao verificar spinner: {str(e)}")
-            
             time.sleep(check_interval)
         
         print(f"[Linha {index}] ⚠️ Timeout ao esperar spinner desaparecer após {timeout} segundos")
         return False
-        
     except Exception as e:
         print(f"[Linha {index}] ❌ Erro ao esperar spinner desaparecer: {str(e)}")
         return False
@@ -577,94 +501,21 @@ def clicar_botao_consulta(driver, index):
         print(f"[Linha {index}] Tentando clicar no botão consultar...")
         botao_xpath = '/html/body/div[1]/sc-app/sc-template/sc-root/main/section/sc-content/sc-consult/div/div[2]/div/sc-card-content/div/main/form/div/div[3]/sc-button/button'
         
-        # Espera o botão estar presente e clicável
-        try:
-            botao = WebDriverWait(driver, 30).until(
-                EC.presence_of_element_located((By.XPATH, botao_xpath))
-            )
-            print(f"[Linha {index}] ✅ Botão consultar encontrado")
-            
-            # Verifica se o botão está desabilitado
-            if botao.get_attribute("disabled"):
-                print(f"[Linha {index}] ⚠️ Botão está desabilitado, aguardando habilitação...")
-                # Aguarda até que o botão seja habilitado
-                WebDriverWait(driver, 10).until(
-                    lambda d: not d.find_element(By.XPATH, botao_xpath).get_attribute("disabled")
-                )
-                print(f"[Linha {index}] ✅ Botão foi habilitado")
-            
-        except TimeoutException:
-            print(f"[Linha {index}] ❌ Timeout ao localizar botão consultar")
-            return False
+        botao = WebDriverWait(driver, 30).until(
+            EC.element_to_be_clickable((By.XPATH, botao_xpath))
+        )
         
-        # Rola até o botão
         driver.execute_script("arguments[0].scrollIntoView(true);", botao)
-        time.sleep(1)
-        
-        # Tenta diferentes métodos de clique
-        tentativas = 0
-        max_tentativas = 3
-        
-        while tentativas < max_tentativas:
-            try:
-                print(f"[Linha {index}] Tentativa {tentativas + 1} de clicar no botão...")
-                
-                # Tenta clicar via JavaScript primeiro (mais confiável neste caso)
-                try:
-                    driver.execute_script("arguments[0].scrollIntoView(true);", botao)
-                    driver.execute_script("arguments[0].click();", botao)
-                    time.sleep(2)  # Aguarda efeito do clique
-                    print(f"[Linha {index}] ✅ Botão clicado via JavaScript")
-                    return True
-                except Exception as e:
-                    print(f"[Linha {index}] ⚠️ Falha ao clicar via JavaScript: {str(e)}")
-                
-                # Tenta clicar normalmente
-                try:
-                    botao.click()
-                    time.sleep(2)  # Aguarda efeito do clique
-                    print(f"[Linha {index}] ✅ Botão clicado com sucesso")
-                    return True
-                except ElementClickInterceptedException:
-                    print(f"[Linha {index}] ⚠️ Clique interceptado, tentando via ActionChains...")
-                
-                # Tenta clicar via ActionChains
-                try:
-                    actions = ActionChains(driver)
-                    actions.move_to_element(botao).click().perform()
-                    time.sleep(2)  # Aguarda efeito do clique
-                    print(f"[Linha {index}] ✅ Botão clicado via ActionChains")
-                    return True
-                except Exception as e:
-                    print(f"[Linha {index}] ⚠️ Falha ao clicar via ActionChains: {str(e)}")
-                
-                # Se chegou aqui, nenhum método funcionou
-                tentativas += 1
-                if tentativas < max_tentativas:
-                    print(f"[Linha {index}] ⚠️ Tentando novamente em 1 segundo...")
-                    time.sleep(1)
-                else:
-                    print(f"[Linha {index}] ❌ Todas as tentativas de clique falharam")
-                    return False
-                
-            except Exception as e:
-                print(f"[Linha {index}] ⚠️ Erro durante tentativa de clique: {str(e)}")
-                tentativas += 1
-                if tentativas < max_tentativas:
-                    time.sleep(1)
-                else:
-                    return False
-        
-        return False
+        driver.execute_script("arguments[0].click();", botao)
+        print(f"[Linha {index}] ✅ Botão clicado via JavaScript")
+        return True
         
     except Exception as e:
         print(f"[Linha {index}] ❌ Erro ao tentar clicar no botão consultar: {str(e)}")
         return False
 
-# Nova função para verificar a tela atual
 def verificar_tela_atual(driver, index):
     try:
-        # Verificar se está na tela de consulta (campo de documento presente)
         campo_documento_xpath = '/html/body/div/sc-app/sc-template/sc-root/main/section/sc-content/sc-consult/div/div[2]/div/sc-card-content/div/main/form/div/div[2]/sc-form-field/div/input'
         try:
             WebDriverWait(driver, 5).until(
@@ -675,7 +526,6 @@ def verificar_tela_atual(driver, index):
         except TimeoutException:
             pass
 
-        # Verificar se está na tela de seleção de conta
         select_conta_xpath = '/html/body/div[1]/sc-app/sc-template/sc-root/main/aside/sc-sidebar-container/aside/sc-sidebar/div[2]/div[1]/div/form/div/select'
         try:
             WebDriverWait(driver, 5).until(
@@ -686,7 +536,6 @@ def verificar_tela_atual(driver, index):
         except TimeoutException:
             pass
 
-        # Verificar se está na tela de formulário
         form_xpath = "//form"
         try:
             WebDriverWait(driver, 5).until(
@@ -708,75 +557,14 @@ def clicar_botao_abrir(driver, index):
         print(f"[Linha {index}] Tentando clicar no botão Abrir...")
         botao_xpath = '/html/body/div[1]/sc-app/sc-template/sc-root/main/section/sc-content/sc-consult/div/div[2]/div/sc-card-content/div/main/form/div/div[4]/sc-card/div/sc-card-content/div/div/div[2]/sc-button/button'
         
-        # Espera o botão estar presente e clicável
-        try:
-            botao = WebDriverWait(driver, 30).until(
-                EC.element_to_be_clickable((By.XPATH, botao_xpath))
-            )
-            print(f"[Linha {index}] ✅ Botão Abrir encontrado")
-        except TimeoutException:
-            print(f"[Linha {index}] ❌ Timeout ao localizar botão Abrir")
-            return False
+        botao = WebDriverWait(driver, 30).until(
+            EC.element_to_be_clickable((By.XPATH, botao_xpath))
+        )
         
-        # Rola até o botão
         driver.execute_script("arguments[0].scrollIntoView(true);", botao)
-        time.sleep(1)
-        
-        # Tenta diferentes métodos de clique
-        tentativas = 0
-        max_tentativas = 3
-        
-        while tentativas < max_tentativas:
-            try:
-                print(f"[Linha {index}] Tentativa {tentativas + 1} de clicar no botão...")
-                
-                # Tenta clicar via JavaScript primeiro
-                try:
-                    driver.execute_script("arguments[0].scrollIntoView(true);", botao)
-                    driver.execute_script("arguments[0].click();", botao)
-                    time.sleep(2)  # Aguarda efeito do clique
-                    print(f"[Linha {index}] ✅ Botão clicado via JavaScript")
-                    return True
-                except Exception as e:
-                    print(f"[Linha {index}] ⚠️ Falha ao clicar via JavaScript: {str(e)}")
-                
-                # Tenta clicar normalmente
-                try:
-                    botao.click()
-                    time.sleep(2)  # Aguarda efeito do clique
-                    print(f"[Linha {index}] ✅ Botão clicado com sucesso")
-                    return True
-                except ElementClickInterceptedException:
-                    print(f"[Linha {index}] ⚠️ Clique interceptado, tentando via ActionChains...")
-                
-                # Tenta clicar via ActionChains
-                try:
-                    actions = ActionChains(driver)
-                    actions.move_to_element(botao).click().perform()
-                    time.sleep(2)  # Aguarda efeito do clique
-                    print(f"[Linha {index}] ✅ Botão clicado via ActionChains")
-                    return True
-                except Exception as e:
-                    print(f"[Linha {index}] ⚠️ Falha ao clicar via ActionChains: {str(e)}")
-                
-                # Se chegou aqui, nenhum método funcionou
-                tentativas += 1
-                if tentativas < max_tentativas:
-                    print(f"[Linha {index}] ⚠️ Tentando novamente em 1 segundo...")
-                    time.sleep(1)
-                else:
-                    print(f"[Linha {index}] ❌ Todas as tentativas de clique falharam")
-                    return False
-                
-            except Exception as e:
-                print(f"[Linha {index}] ⚠️ Erro durante tentativa de clique: {str(e)}")
-                tentativas += 1
-                if tentativas < max_tentativas:
-                    time.sleep(1)
-                else:
-                    return False
-        
-        return False
+        driver.execute_script("arguments[0].click();", botao)
+        print(f"[Linha {index}] ✅ Botão clicado via JavaScript")
+        return True
         
     except Exception as e:
         print(f"[Linha {index}] ❌ Erro ao tentar clicar no botão Abrir: {str(e)}")
@@ -785,8 +573,6 @@ def clicar_botao_abrir(driver, index):
 def clicar_menu_cobranca(driver, index):
     try:
         print(f"[Linha {index}] Tentando clicar no menu 'Cobrança'...")
-        
-        # Tenta diferentes XPaths para encontrar o menu Cobrança
         cobranca_xpaths = [
             '//*[@id="products"]/div[10]/sc-card/div/div/div/div',
             '/html/body/div[1]/sc-app/sc-template/sc-root/main/aside/sc-sidebar-container/aside/sc-sidebar/div[4]/div[10]/sc-card/div/div/div/div',
@@ -809,74 +595,10 @@ def clicar_menu_cobranca(driver, index):
         if not menu_cobranca:
             raise NoSuchElementException("Menu 'Cobrança' não encontrado com nenhum dos XPaths")
         
-        # Rola até o elemento
         driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", menu_cobranca)
-        time.sleep(1)
-        
-        # Tenta diferentes métodos de clique
-        tentativas = 0
-        max_tentativas = 3
-        
-        while tentativas < max_tentativas:
-            try:
-                print(f"[Linha {index}] Tentativa {tentativas + 1} de clicar no menu 'Cobrança'...")
-                
-                # Tenta clicar via JavaScript primeiro
-                try:
-                    driver.execute_script("arguments[0].click();", menu_cobranca)
-                    time.sleep(2)
-                    print(f"[Linha {index}] ✅ Menu 'Cobrança' clicado via JavaScript")
-                    return True
-                except Exception as e:
-                    print(f"[Linha {index}] ⚠️ Falha ao clicar via JavaScript: {str(e)}")
-                
-                # Tenta clicar via ActionChains
-                try:
-                    actions = ActionChains(driver)
-                    actions.move_to_element(menu_cobranca).pause(1).click().perform()
-                    time.sleep(2)
-                    print(f"[Linha {index}] ✅ Menu 'Cobrança' clicado via ActionChains")
-                    return True
-                except Exception as e:
-                    print(f"[Linha {index}] ⚠️ Falha ao clicar via ActionChains: {str(e)}")
-                
-                # Tenta clicar normalmente
-                try:
-                    menu_cobranca.click()
-                    time.sleep(2)
-                    print(f"[Linha {index}] ✅ Menu 'Cobrança' clicado com sucesso")
-                    return True
-                except ElementClickInterceptedException:
-                    print(f"[Linha {index}] ⚠️ Clique interceptado, tentando remover elemento interceptador...")
-                    try:
-                        # Tenta remover o elemento que está interceptando o clique
-                        elemento_interceptador = driver.find_element(By.XPATH, "//div[contains(@class, 'col-offset-start-6')]")
-                        driver.execute_script("arguments[0].remove();", elemento_interceptador)
-                        time.sleep(1)
-                        menu_cobranca.click()
-                        time.sleep(2)
-                        print(f"[Linha {index}] ✅ Menu 'Cobrança' clicado após remover elemento interceptador")
-                        return True
-                    except Exception as e:
-                        print(f"[Linha {index}] ⚠️ Falha ao remover elemento interceptador: {str(e)}")
-                
-                tentativas += 1
-                if tentativas < max_tentativas:
-                    print(f"[Linha {index}] ⚠️ Tentando novamente em 2 segundos...")
-                    time.sleep(2)
-                else:
-                    print(f"[Linha {index}] ❌ Todas as tentativas de clique falharam")
-                    return False
-                
-            except Exception as e:
-                print(f"[Linha {index}] ⚠️ Erro durante tentativa de clique: {str(e)}")
-                tentativas += 1
-                if tentativas < max_tentativas:
-                    time.sleep(2)
-                else:
-                    return False
-        
-        return False
+        driver.execute_script("arguments[0].click();", menu_cobranca)
+        print(f"[Linha {index}] ✅ Menu 'Cobrança' clicado via JavaScript")
+        return True
         
     except Exception as e:
         print(f"[Linha {index}] ❌ Erro ao clicar no menu 'Cobrança': {str(e)}")
@@ -887,84 +609,14 @@ def clicar_botao_registro_chamado(driver, index):
         print(f"[Linha {index}] Tentando clicar no botão de registro de chamado...")
         botao_xpath = '/html/body/div[1]/sc-app/sc-register-ticket-button/div/div/div/button'
         
-        # Espera o botão estar presente e clicável
-        try:
-            botao = WebDriverWait(driver, 20).until(
-                EC.presence_of_element_located((By.XPATH, botao_xpath))
-            )
-            print(f"[Linha {index}] ✅ Botão de registro de chamado encontrado")
-        except TimeoutException:
-            print(f"[Linha {index}] ❌ Timeout ao localizar botão de registro de chamado")
-            return False
+        botao = WebDriverWait(driver, 20).until(
+            EC.element_to_be_clickable((By.XPATH, botao_xpath))
+        )
         
-        # Rola até o elemento e aguarda um momento
         driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", botao)
-        time.sleep(2)
-        
-        # Tenta diferentes métodos de clique
-        tentativas = 0
-        max_tentativas = 3
-        
-        while tentativas < max_tentativas:
-            try:
-                print(f"[Linha {index}] Tentativa {tentativas + 1} de clicar no botão...")
-                
-                # Tenta clicar via JavaScript primeiro
-                try:
-                    driver.execute_script("arguments[0].click();", botao)
-                    time.sleep(2)
-                    print(f"[Linha {index}] ✅ Botão clicado via JavaScript")
-                    return True
-                except Exception as e:
-                    print(f"[Linha {index}] ⚠️ Falha ao clicar via JavaScript: {str(e)}")
-                
-                # Tenta clicar via ActionChains
-                try:
-                    actions = ActionChains(driver)
-                    actions.move_to_element(botao).pause(1).click().perform()
-                    time.sleep(2)
-                    print(f"[Linha {index}] ✅ Botão clicado via ActionChains")
-                    return True
-                except Exception as e:
-                    print(f"[Linha {index}] ⚠️ Falha ao clicar via ActionChains: {str(e)}")
-                
-                # Tenta clicar normalmente
-                try:
-                    botao.click()
-                    time.sleep(2)
-                    print(f"[Linha {index}] ✅ Botão clicado com sucesso")
-                    return True
-                except ElementClickInterceptedException:
-                    print(f"[Linha {index}] ⚠️ Clique interceptado, tentando remover elemento interceptador...")
-                    try:
-                        # Tenta remover o elemento que está interceptando o clique
-                        elemento_interceptador = driver.find_element(By.XPATH, "//div[contains(@class, 'col-offset-start-6')]")
-                        driver.execute_script("arguments[0].remove();", elemento_interceptador)
-                        time.sleep(1)
-                        botao.click()
-                        time.sleep(2)
-                        print(f"[Linha {index}] ✅ Botão clicado após remover elemento interceptador")
-                        return True
-                    except Exception as e:
-                        print(f"[Linha {index}] ⚠️ Falha ao remover elemento interceptador: {str(e)}")
-                
-                tentativas += 1
-                if tentativas < max_tentativas:
-                    print(f"[Linha {index}] ⚠️ Tentando novamente em 2 segundos...")
-                    time.sleep(2)
-                else:
-                    print(f"[Linha {index}] ❌ Todas as tentativas de clique falharam")
-                    return False
-                
-            except Exception as e:
-                print(f"[Linha {index}] ⚠️ Erro durante tentativa de clique: {str(e)}")
-                tentativas += 1
-                if tentativas < max_tentativas:
-                    time.sleep(2)
-                else:
-                    return False
-        
-        return False
+        driver.execute_script("arguments[0].click();", botao)
+        print(f"[Linha {index}] ✅ Botão clicado via JavaScript")
+        return True
         
     except Exception as e:
         print(f"[Linha {index}] ❌ Erro ao clicar no botão de registro de chamado: {str(e)}")
@@ -975,161 +627,90 @@ def preencher_campos_formulario(driver, actions, row, index, df: pd.DataFrame) -
     try:
         print(f"[Linha {index}] Preenchendo campos do formulário...")
 
+        def preencher_campo_com_validacao(campo_id, valor, max_tentativas=3):
+            for tentativa in range(max_tentativas):
+                try:
+                    campo = WebDriverWait(driver, 10).until(
+                        EC.element_to_be_clickable((By.ID, campo_id))
+                    )
+                    driver.execute_script("""
+                        arguments[0].value = '';
+                        arguments[0].value = arguments[1];
+                        arguments[0].dispatchEvent(new Event('input', { bubbles: true }));
+                        arguments[0].dispatchEvent(new Event('change', { bubbles: true }));
+                    """, campo, valor)
+                    campo.send_keys(Keys.ENTER)
+                    WebDriverWait(driver, 10).until(
+                        lambda d: 'ng-valid' in d.find_element(By.ID, campo_id).get_attribute('class').split()
+                    )
+                    print(f"[Linha {index}] Campo {campo_id} preenchido com: {valor}")
+                    return True
+                except Exception as e:
+                    print(f"[Linha {index}] Tentativa {tentativa + 1} falhou para {campo_id}: {str(e)}")
+                    if tentativa < max_tentativas - 1:
+                        time.sleep(1)
+                        continue
+                    raise FormularioError(f"Falha ao preencher {campo_id} após {max_tentativas} tentativas: {str(e)}")
+
         # Tipo de atendimento
-        print(f"[Linha {index}] Preenchendo Tipo de atendimento...")
-        tipo_xpath = '//*[@id="serviceTypeId"]'
-        campo_tipo = WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.XPATH, tipo_xpath))
-        )
-        # Preenche o valor diretamente via JavaScript e aciona eventos
-        valor_tipo = "Chat Receptivo"
-        driver.execute_script("""
-            arguments[0].value = '';
-            arguments[0].value = arguments[1];
-            arguments[0].dispatchEvent(new Event('input', { bubbles: true }));
-            arguments[0].dispatchEvent(new Event('change', { bubbles: true }));
-        """, campo_tipo, valor_tipo)
-        time.sleep(1)
-        campo_tipo.send_keys(Keys.ENTER)
-        time.sleep(1)
-        print(f"[Linha {index}] Tipo de atendimento preenchido: {valor_tipo}")
+        preencher_campo_com_validacao("serviceTypeId", "Chat Receptivo")
 
         # Categoria
-        print(f"[Linha {index}] Preenchendo Categoria...")
-        categoria_xpath = '//*[@id="categoryId"]'
-        campo_categoria = WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.XPATH, categoria_xpath))
-        )
-        # Preenche o valor diretamente via JavaScript e aciona eventos
-        valor_categoria = row['Categoria']
-        driver.execute_script("""
-            arguments[0].value = '';
-            arguments[0].value = arguments[1];
-            arguments[0].dispatchEvent(new Event('input', { bubbles: true }));
-            arguments[0].dispatchEvent(new Event('change', { bubbles: true }));
-        """, campo_categoria, valor_categoria)
-        time.sleep(1)
-        campo_categoria.send_keys(Keys.ENTER)
-        time.sleep(1)
-        print(f"[Linha {index}] Categoria preenchida: {valor_categoria}")
+        preencher_campo_com_validacao("categoryId", row['Categoria'])
 
         # Subcategoria
-        print(f"[Linha {index}] Preenchendo Subcategoria...")
-        subcategoria_xpath = '//*[@id="subCategoryId"]'
-        campo_subcategoria = WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.XPATH, subcategoria_xpath))
-        )
-        # Preenche o valor diretamente via JavaScript e aciona eventos
-        valor_subcategoria = "Api Sicoob"
-        driver.execute_script("""
-            arguments[0].value = '';
-            arguments[0].value = arguments[1];
-            arguments[0].dispatchEvent(new Event('input', { bubbles: true }));
-            arguments[0].dispatchEvent(new Event('change', { bubbles: true }));
-        """, campo_subcategoria, valor_subcategoria)
-        time.sleep(1)
-        campo_subcategoria.send_keys(Keys.ENTER)
-        time.sleep(1)
-        print(f"[Linha {index}] Subcategoria preenchida: {valor_subcategoria}")
+        preencher_campo_com_validacao("subCategoryId", "Api Sicoob")
 
         # Serviço
-        print(f"[Linha {index}] Preenchendo Serviço...")
-        servico_xpath = '//*[@id="serviceId"]'
-        campo_servico = WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.XPATH, servico_xpath))
-        )
-        # Preenche o valor diretamente via JavaScript e aciona eventos
         valor_servico = normalizar_servico(row['Serviço'])
-        driver.execute_script("""
-            arguments[0].value = '';
-            arguments[0].value = arguments[1];
-            arguments[0].dispatchEvent(new Event('input', { bubbles: true }));
-            arguments[0].dispatchEvent(new Event('change', { bubbles: true }));
-        """, campo_servico, valor_servico)
-        time.sleep(1)
-        campo_servico.send_keys(Keys.ENTER)
-        time.sleep(1)
-        print(f"[Linha {index}] Serviço preenchido: {valor_servico}")
+        preencher_campo_com_validacao("serviceId", valor_servico)
 
         # Canal de autoatendimento
         print(f"[Linha {index}] Preenchendo Canal de autoatendimento...")
-        canal_xpath = '//*[@id="Canal De Autoatendimento"]'
         try:
-            select_canal = WebDriverWait(driver, 10).until(
-                EC.presence_of_element_located((By.XPATH, canal_xpath))
-            )
-            # Preenche o valor diretamente via JavaScript e aciona eventos
-            valor_canal = "não se aplica"
-            driver.execute_script("""
-                arguments[0].value = '';
-                arguments[0].value = arguments[1];
-                arguments[0].dispatchEvent(new Event('input', { bubbles: true }));
-                arguments[0].dispatchEvent(new Event('change', { bubbles: true }));
-            """, select_canal, valor_canal)
-            time.sleep(1)
-            select_canal.send_keys(Keys.ENTER)
-            time.sleep(1)
-            print(f"[Linha {index}] Canal de autoatendimento selecionado: {valor_canal}")
+            selecionar_opcao_select(driver, '//*[@id="Canal De Autoatendimento"]', "não se aplica")
         except Exception as e:
             print(f"[Linha {index}] ⚠️ Campo Canal de autoatendimento não encontrado: {str(e)}")
-            # Continua mesmo se não encontrar o campo
 
         # Protocolo PLAD
         print(f"[Linha {index}] Preenchendo Protocolo PLAD...")
-        protocolo_xpath = '//*[@id="Protocolo Plad"]'
         campo_protocolo = WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.XPATH, protocolo_xpath))
+            EC.presence_of_element_located((By.ID, "Protocolo Plad"))
         )
-        # Este campo não parece ter autocomplete complexo, mantendo send_keys
         campo_protocolo.clear()
-        campo_protocolo.click()
         campo_protocolo.send_keys(str(row['Protocolo PLAD']))
-        time.sleep(1)
+        WebDriverWait(driver, 10).until(
+            lambda d: 'ng-valid' in d.find_element(By.ID, "Protocolo Plad").get_attribute('class').split()
+        )
         print(f"[Linha {index}] Protocolo PLAD preenchido: {row['Protocolo PLAD']}")
 
         # Descrição
         print(f"[Linha {index}] Preenchendo Descrição...")
-        descricao_xpath = '//*[@id="description"]'
-        campo_descricao = WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.XPATH, descricao_xpath))
-        )
-
-        # Mensagem padrão para descrição
-        MENSAGEM_PADRAO = "Chamado registrado via automação"
-
-        # Verifica se existe observação válida na coluna G
+        MENSAGEM_PADRAO = "Chamado da Plataforma de atendimento digital registrado via automação"
         observacao = str(row.get('Observação', '')).strip()
-        # Define a descrição, tratando casos de nan, valores vazios e tamanho mínimo
-        if (pd.isna(row.get('Observação')) or
-            observacao.lower() == 'nan' or
-            not observacao or
-            len(observacao) < 10):
-            descricao = MENSAGEM_PADRAO
-            if observacao and len(observacao) < 10:
-                print(f"[Linha {index}] Observação '{observacao}' tem menos de 10 caracteres. Usando mensagem padrão.")
-        else:
-            descricao = observacao
-
-        # Limpa o campo e preenche a descrição
-        # Este campo não parece ter autocomplete complexo, mantendo send_keys
+        descricao = MENSAGEM_PADRAO if (pd.isna(row.get('Observação')) or observacao.lower() == 'nan' or not observacao or len(observacao) < 10) else observacao
+        if observacao and len(observacao) < 10:
+            print(f"[Linha {index}] Observação '{observacao}' tem menos de 10 caracteres. Usando mensagem padrão.")
+        
+        campo_descricao = WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.ID, "description"))
+        )
         campo_descricao.clear()
-        campo_descricao.click()
         campo_descricao.send_keys(descricao)
-        time.sleep(1)
+        WebDriverWait(driver, 10).until(
+            lambda d: 'ng-valid' in d.find_element(By.ID, "description").get_attribute('class').split()
+        )
         print(f"[Linha {index}] Descrição preenchida: {descricao[:50]}..." if len(descricao) > 50 else f"[Linha {index}] Descrição preenchida: {descricao}")
 
-        # Aguarda o botão Registrar ficar habilitado e clica nele
+        # Aguarda o botão Registrar ficar habilitado
         print(f"[Linha {index}] Aguardando botão Registrar ficar habilitado...")
         registrar_xpath = '//*[@id="actionbar hide"]/div/div[2]/form/div/div[20]/sc-button/button'
-        botao_registrar = WebDriverWait(driver, 30).until(
-            lambda d: d.find_element(By.XPATH, registrar_xpath)
-        )
         WebDriverWait(driver, 30).until(
-            lambda d: not botao_registrar.get_attribute("disabled")
+            EC.element_to_be_clickable((By.XPATH, registrar_xpath))
         )
-        botao_registrar.click()
+        botao_registrar = driver.find_element(By.XPATH, registrar_xpath)
+        driver.execute_script("arguments[0].click();", botao_registrar)
         print(f"[Linha {index}] Botão Registrar clicado")
-        time.sleep(2)
 
         # Aguarda e clica no botão Confirmar
         print(f"[Linha {index}] Aguardando botão Confirmar...")
@@ -1137,9 +718,8 @@ def preencher_campos_formulario(driver, actions, row, index, df: pd.DataFrame) -
         botao_confirmar = WebDriverWait(driver, 10).until(
             EC.element_to_be_clickable((By.XPATH, confirmar_xpath))
         )
-        botao_confirmar.click()
+        driver.execute_script("arguments[0].click();", botao_confirmar)
         print(f"[Linha {index}] Botão Confirmar clicado")
-        time.sleep(2)
 
         # Captura o número do protocolo
         print(f"[Linha {index}] Capturando número do protocolo...")
@@ -1149,6 +729,11 @@ def preencher_campos_formulario(driver, actions, row, index, df: pd.DataFrame) -
         )
         numero_protocolo = elemento_protocolo.text.strip()
         print(f"[Linha {index}] Protocolo capturado: {numero_protocolo}")
+
+        # Salva o protocolo na coluna F
+        df.at[index, 'Protocolo PLAD'] = numero_protocolo
+        df.to_excel(EXCEL_PATH, index=False)
+        print(f"[Linha {index}] Protocolo salvo na planilha: {numero_protocolo}")
 
         return numero_protocolo
 
@@ -1168,10 +753,7 @@ def preencher_formulario(driver, actions, row, index, df: pd.DataFrame, tentativ
 
         logger.info(f"\n[Linha {index}] Iniciando preenchimento do formulário... (Tentativa {tentativa + 1})")
 
-        # Espera o spinner desaparecer antes de começar
         esperar_spinner_desaparecer(driver, index)
-
-        # Verifica se está na tela correta
         tela_atual = verificar_tela_atual(driver, index)
 
         if tela_atual == "formulario":
@@ -1180,16 +762,11 @@ def preencher_formulario(driver, actions, row, index, df: pd.DataFrame, tentativ
 
         elif tela_atual == "selecao_conta":
             print(f"[Linha {index}] ⚠️ Está na tela de seleção de conta. Tentando selecionar conta...")
-            # Primeiro seleciona a conta
             if not selecionar_conta_por_cooperativa(driver, row['Cooperativa'], index):
                 df.at[index, 'Observação'] = "Falha ao selecionar conta"
                 df.to_excel(EXCEL_PATH, index=False)
                 return None
 
-            # Aguarda um momento para garantir que a conta foi selecionada
-            time.sleep(2)
-
-            # Verifica se a conta foi realmente selecionada
             select_xpath = '/html/body/div[1]/sc-app/sc-template/sc-root/main/aside/sc-sidebar-container/aside/sc-sidebar/div[2]/div[1]/div/form/div/select'
             try:
                 select_element = WebDriverWait(driver, 10).until(
@@ -1207,22 +784,16 @@ def preencher_formulario(driver, actions, row, index, df: pd.DataFrame, tentativ
                 df.to_excel(EXCEL_PATH, index=False)
                 return None
 
-            # Após confirmar que a conta foi selecionada, clica no menu Cobrança
             if not clicar_menu_cobranca(driver, index):
                 df.at[index, 'Observação'] = "Falha ao clicar no menu Cobrança"
                 df.to_excel(EXCEL_PATH, index=False)
                 return None
 
-            # Aguarda um momento para o menu carregar
-            time.sleep(2)
-
-            # Clica no botão de registro de chamado
             if not clicar_botao_registro_chamado(driver, index):
                 df.at[index, 'Observação'] = "Falha ao clicar no botão de registro de chamado"
                 df.to_excel(EXCEL_PATH, index=False)
                 return None
 
-            # Aguarda o campo de categoria do formulário ficar visível/clicável
             try:
                 categoria_xpath = '//*[@id="categoryId"]'
                 WebDriverWait(driver, 20).until(
@@ -1240,98 +811,58 @@ def preencher_formulario(driver, actions, row, index, df: pd.DataFrame, tentativ
             print(f"[Linha {index}] Está na tela de consulta. Preenchendo documento...")
             campo_documento_xpath = '/html/body/div/sc-app/sc-template/sc-root/main/section/sc-content/sc-consult/div/div[2]/div/sc-card-content/div/main/form/div/div[2]/sc-form-field/div/input'
             try:
-                # Espera o campo estar presente e clicável
                 campo_documento = WebDriverWait(driver, 30).until(
                     EC.element_to_be_clickable((By.XPATH, campo_documento_xpath))
                 )
-
-                # Rola até o elemento
                 driver.execute_script("arguments[0].scrollIntoView(true);", campo_documento)
-                time.sleep(1)
-
-                # Limpa o campo
                 campo_documento.clear()
-                time.sleep(0.5)
-
-                # Clica no campo
                 campo_documento.click()
-                time.sleep(0.5)
-
-                # Obtém o documento e formata
+                
                 doc_original = str(row['Documento do cooperado']).strip()
-                numeros = ''.join(filter(str.isdigit, doc_original))
-                doc_formatado = formatar_documento(numeros)
+                doc_formatado = formatar_documento(doc_original)
                 print(f"[Linha {index}] Preenchendo documento: {doc_formatado}")
-
-                # Preenche o documento caractere por caractere
+                
                 for digito in doc_formatado:
                     campo_documento.send_keys(digito)
-                    time.sleep(0.1)
-
-                # Aguarda um momento para garantir que o valor foi preenchido
-                time.sleep(1)
-
-                # Verifica se o valor foi preenchido corretamente
+                
                 valor_preenchido = campo_documento.get_attribute('value')
-                print(f"[Linha {index}] Valor preenchido no campo: {valor_preenchido}")
-
                 if not valor_preenchido:
-                    print(f"[Linha {index}] ⚠️ Campo está vazio após preenchimento")
-                    # Tenta preencher novamente usando JavaScript
                     driver.execute_script(f"arguments[0].value = '{doc_formatado}';", campo_documento)
-                    time.sleep(1)
                     valor_preenchido = campo_documento.get_attribute('value')
-                    print(f"[Linha {index}] Valor após tentativa JavaScript: {valor_preenchido}")
-
-                # Verifica se o valor foi preenchido corretamente (ignorando formatação)
+                
                 valor_preenchido_numeros = ''.join(filter(str.isdigit, valor_preenchido))
+                numeros = ''.join(filter(str.isdigit, doc_original))
                 if valor_preenchido_numeros == numeros:
                     print(f"[Linha {index}] ✅ Documento preenchido com sucesso: {valor_preenchido}")
-
-                    # Tenta clicar no botão consultar
+                    
                     if not clicar_botao_consulta(driver, index):
-                        print(f"[Linha {index}] ❌ Falha ao clicar no botão consultar")
                         df.at[index, 'Observação'] = "Falha ao clicar no botão consultar"
                         df.to_excel(EXCEL_PATH, index=False)
                         return None
-
-                    # Aguarda um momento para a consulta ser processada
-                    time.sleep(2)
-
-                    # Verifica se a pessoa foi encontrada
-                    if verificar_pessoa_nao_encontrada(driver, index):
-                        print(f"[Linha {index}] ❌ Pessoa não encontrada")
+                    
+                    if verificar_pessoa_nao_encontrshuarda_documento(driver, index):
                         df.at[index, 'Observação'] = "Pessoa não encontrada"
                         df.to_excel(EXCEL_PATH, index=False)
                         return None
-
-                    # Tenta clicar no botão Abrir
+                    
                     if not clicar_botao_abrir(driver, index):
-                        print(f"[Linha {index}] ❌ Falha ao clicar no botão Abrir")
                         df.at[index, 'Observação'] = "Falha ao clicar no botão Abrir"
                         df.to_excel(EXCEL_PATH, index=False)
                         return None
-
-                    # Aguarda um momento para a ação ser processada
-                    time.sleep(2)
-
-                    # Verifica se mudou para a tela de seleção de conta
+                    
                     tela_atual = verificar_tela_atual(driver, index)
                     if tela_atual == "selecao_conta":
                         print(f"[Linha {index}] ✅ Tela mudou para seleção de conta")
-                        # Chama a função novamente para processar a tela de seleção de conta
                         return preencher_formulario(driver, actions, row, index, df)
                     else:
-                        print(f"[Linha {index}] ❌ Tela não mudou para seleção de conta após clicar em Abrir")
                         df.at[index, 'Observação'] = "Tela não mudou para seleção de conta após clicar em Abrir"
                         df.to_excel(EXCEL_PATH, index=False)
                         return None
                 else:
-                    print(f"[Linha {index}] ❌ Documento não preenchido corretamente. Valor esperado: {numeros}, Valor obtido: {valor_preenchido_numeros}")
+                    print(f"[Linha {index}] ❌ Documento não preenchido corretamente")
                     df.at[index, 'Observação'] = "Falha ao preencher documento"
                     df.to_excel(EXCEL_PATH, index=False)
                     return None
-
             except Exception as e:
                 print(f"[Linha {index}] ❌ Erro ao preencher documento: {str(e)}")
                 df.at[index, 'Observação'] = f"Erro ao preencher documento: {str(e)}"
@@ -1340,8 +871,7 @@ def preencher_formulario(driver, actions, row, index, df: pd.DataFrame, tentativ
         else:
             print(f"[Linha {index}] ⚠️ Tela desconhecida. Tentando voltar...")
             driver.get(BASE_URL)
-            time.sleep(2)
-            esperar_spinner_desaparecer(driver, index)
+            WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.TAG_NAME, "body")))
             return preencher_formulario(driver, actions, row, index, df, tentativa + 1)
 
     except Exception as e:
@@ -1382,8 +912,7 @@ def finalizar_atendimento(driver, index, df: pd.DataFrame):
         botao_finalizar = WebDriverWait(driver, 10).until(
             EC.element_to_be_clickable((By.XPATH, finalizar_xpath))
         )
-        actions = ActionChains(driver)
-        actions.move_to_element(botao_finalizar).click().perform()
+        driver.execute_script("arguments[0].click();", botao_finalizar)
         
         logger.info(f"[Linha {index}] Aguardando modal de confirmação...")
         confirmar_xpath = '/html/body/div[3]/div[2]/div/sc-end-service-modal/sc-modal/div/div/main/div/div[4]/button'
@@ -1391,22 +920,16 @@ def finalizar_atendimento(driver, index, df: pd.DataFrame):
         botao_confirmar = WebDriverWait(driver, 10).until(
             EC.element_to_be_clickable((By.XPATH, confirmar_xpath))
         )
-        actions.move_to_element(botao_confirmar).click().perform()
+        driver.execute_script("arguments[0].click();", botao_confirmar)
         
         logger.info(f"[Linha {index}] Aguardando retorno à tela inicial...")
         WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.TAG_NAME, "body")))
         logger.info(f"[Linha {index}] ✅ Atendimento finalizado com sucesso!")
         return True
         
-    except TimeoutException as e:
-        log_error(e, "finalização do atendimento", index, df)
-        raise FinalizacaoError(f"Timeout durante finalização: {str(e)}")
-    except NoSuchElementException as e:
-        log_error(e, "finalização do atendimento", index, df)
-        raise FinalizacaoError(f"Elemento não encontrado durante finalização: {str(e)}")
     except Exception as e:
         log_error(e, "finalização do atendimento", index, df)
-        raise FinalizacaoError(f"Falha ao finalizar atendimento: {str(e)}")
+        return False
 
 def main():
     try:
@@ -1442,7 +965,8 @@ def main():
                     logger.info(f"\n{'='*50}")
                     logger.info(f"[Linha {index}] 📝 Iniciando processamento do registro {index + 1}/{total_registros}")
                     
-                    if tentar_preencher_formulario(driver, actions, row, index, df):
+                    protocolo = tentar_preencher_formulario(driver, actions, row, index, df)
+                    if protocolo:
                         if finalizar_atendimento(driver, index, df):
                             registros_processados += 1
                             logger.info(f"[Linha {index}] ✅ Registro processado com sucesso!")
@@ -1453,9 +977,22 @@ def main():
                         registros_com_erro += 1
                         logger.error(f"[Linha {index}] ❌ Erro ao preencher formulário")
                     
+                    # Reinicia o processo carregando a URL inicial
+                    logger.info(f"[Linha {index}] Reiniciando processo com URL inicial...")
+                    driver.get(BASE_URL)
+                    WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.TAG_NAME, "body")))
+                    esperar_spinner_desaparecer(driver, index)
+                    
                 except Exception as e:
                     registros_com_erro += 1
                     log_error(e, "processamento do registro", index, df)
+                    # Tenta reiniciar a URL mesmo em caso de erro
+                    try:
+                        driver.get(BASE_URL)
+                        WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.TAG_NAME, "body")))
+                        esperar_spinner_desaparecer(driver, index)
+                    except Exception as e2:
+                        logger.error(f"[Linha {index}] Erro ao reiniciar URL: {str(e2)}")
                     continue
             
             logger.info("\n" + "="*50)
@@ -1468,7 +1005,6 @@ def main():
         finally:
             logger.info("Fechando navegador...")
             try:
-                time.sleep(1)
                 driver.quit()
             except Exception as e:
                 logger.warning(f"Erro ao fechar o navegador: {str(e)}")
