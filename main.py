@@ -1044,17 +1044,27 @@ def preencher_campos_formulario(driver, actions, row, index, df: pd.DataFrame) -
         campo_servico = WebDriverWait(driver, 10).until(
             EC.presence_of_element_located((By.XPATH, servico_xpath))
         )
-        # Preenche o valor diretamente via JavaScript e aciona eventos
         valor_servico = normalizar_servico(row['Serviço'])
-        driver.execute_script("""
-            arguments[0].value = '';
-            arguments[0].value = arguments[1];
-            arguments[0].dispatchEvent(new Event('input', { bubbles: true }));
-            arguments[0].dispatchEvent(new Event('change', { bubbles: true }));
-        """, campo_servico, valor_servico)
-        time.sleep(1)
-        campo_servico.send_keys(Keys.ENTER)
-        if not aguardar_campo_valido(driver, campo_servico, index):
+
+        # Tenta preencher o campo até que seja validado
+        for tentativa in range(3):
+            driver.execute_script(
+                """
+                arguments[0].value = '';
+                arguments[0].value = arguments[1];
+                arguments[0].dispatchEvent(new Event('input', { bubbles: true }));
+                arguments[0].dispatchEvent(new Event('change', { bubbles: true }));
+                """,
+                campo_servico,
+                valor_servico,
+            )
+            time.sleep(1)
+            campo_servico.send_keys(Keys.ENTER)
+            if aguardar_campo_valido(driver, campo_servico, index):
+                break
+            if tentativa < 2:
+                time.sleep(1)
+        else:
             raise FormularioError("Serviço inválido")
         print(f"[Linha {index}] Serviço preenchido: {valor_servico}")
 
