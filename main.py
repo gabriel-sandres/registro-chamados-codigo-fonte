@@ -19,6 +19,8 @@ import traceback
 from typing import Optional, Tuple
 from selenium.common.exceptions import TimeoutException, NoSuchElementException, ElementClickInterceptedException
 
+# Tempo de espera padrão entre ações de preenchimento de campos
+FIELD_DELAY = 2
 # === CONFIGURAÇÃO DE LOGGING ===
 def setup_logging():
     log_dir = "logs"
@@ -986,15 +988,24 @@ def preencher_campos_formulario(driver, actions, row, index, df: pd.DataFrame) -
         )
         # Preenche o valor diretamente via JavaScript e aciona eventos
         valor_tipo = "Chat Receptivo"
-        driver.execute_script("""
-            arguments[0].value = '';
-            arguments[0].value = arguments[1];
-            arguments[0].dispatchEvent(new Event('input', { bubbles: true }));
-            arguments[0].dispatchEvent(new Event('change', { bubbles: true }));
-        """, campo_tipo, valor_tipo)
-        time.sleep(1)
-        campo_tipo.send_keys(Keys.ENTER)
-        if not aguardar_campo_valido(driver, campo_tipo, index):
+        for tentativa in range(3):
+            driver.execute_script(
+                """
+                arguments[0].value = '';
+                arguments[0].value = arguments[1];
+                arguments[0].dispatchEvent(new Event('input', { bubbles: true }));
+                arguments[0].dispatchEvent(new Event('change', { bubbles: true }));
+                """,
+                campo_tipo,
+                valor_tipo,
+            )
+            time.sleep(FIELD_DELAY)
+            campo_tipo.send_keys(Keys.ENTER)
+            if aguardar_campo_valido(driver, campo_tipo, index):
+                break
+            if tentativa < 2:
+                time.sleep(FIELD_DELAY)
+        else:
             raise FormularioError("Tipo de atendimento inválido")
         print(f"[Linha {index}] Tipo de atendimento preenchido: {valor_tipo}")
 
@@ -1006,15 +1017,24 @@ def preencher_campos_formulario(driver, actions, row, index, df: pd.DataFrame) -
         )
         # Preenche o valor diretamente via JavaScript e aciona eventos
         valor_categoria = row['Categoria']
-        driver.execute_script("""
-            arguments[0].value = '';
-            arguments[0].value = arguments[1];
-            arguments[0].dispatchEvent(new Event('input', { bubbles: true }));
-            arguments[0].dispatchEvent(new Event('change', { bubbles: true }));
-        """, campo_categoria, valor_categoria)
-        time.sleep(1)
-        campo_categoria.send_keys(Keys.ENTER)
-        if not aguardar_campo_valido(driver, campo_categoria, index):
+        for tentativa in range(3):
+            driver.execute_script(
+                """
+                arguments[0].value = '';
+                arguments[0].value = arguments[1];
+                arguments[0].dispatchEvent(new Event('input', { bubbles: true }));
+                arguments[0].dispatchEvent(new Event('change', { bubbles: true }));
+                """,
+                campo_categoria,
+                valor_categoria,
+            )
+            time.sleep(FIELD_DELAY)
+            campo_categoria.send_keys(Keys.ENTER)
+            if aguardar_campo_valido(driver, campo_categoria, index):
+                break
+            if tentativa < 2:
+                time.sleep(FIELD_DELAY)
+        else:
             raise FormularioError("Categoria inválida")
         print(f"[Linha {index}] Categoria preenchida: {valor_categoria}")
 
@@ -1026,15 +1046,24 @@ def preencher_campos_formulario(driver, actions, row, index, df: pd.DataFrame) -
         )
         # Preenche o valor diretamente via JavaScript e aciona eventos
         valor_subcategoria = "Api Sicoob"
-        driver.execute_script("""
-            arguments[0].value = '';
-            arguments[0].value = arguments[1];
-            arguments[0].dispatchEvent(new Event('input', { bubbles: true }));
-            arguments[0].dispatchEvent(new Event('change', { bubbles: true }));
-        """, campo_subcategoria, valor_subcategoria)
-        time.sleep(1)
-        campo_subcategoria.send_keys(Keys.ENTER)
-        if not aguardar_campo_valido(driver, campo_subcategoria, index):
+        for tentativa in range(3):
+            driver.execute_script(
+                """
+                arguments[0].value = '';
+                arguments[0].value = arguments[1];
+                arguments[0].dispatchEvent(new Event('input', { bubbles: true }));
+                arguments[0].dispatchEvent(new Event('change', { bubbles: true }));
+                """,
+                campo_subcategoria,
+                valor_subcategoria,
+            )
+            time.sleep(FIELD_DELAY)
+            campo_subcategoria.send_keys(Keys.ENTER)
+            if aguardar_campo_valido(driver, campo_subcategoria, index):
+                break
+            if tentativa < 2:
+                time.sleep(FIELD_DELAY)
+        else:
             raise FormularioError("Subcategoria inválida")
         print(f"[Linha {index}] Subcategoria preenchida: {valor_subcategoria}")
 
@@ -1058,12 +1087,12 @@ def preencher_campos_formulario(driver, actions, row, index, df: pd.DataFrame) -
                 campo_servico,
                 valor_servico,
             )
-            time.sleep(1)
+            time.sleep(FIELD_DELAY)
             campo_servico.send_keys(Keys.ENTER)
             if aguardar_campo_valido(driver, campo_servico, index):
                 break
             if tentativa < 2:
-                time.sleep(1)
+                time.sleep(FIELD_DELAY)
         else:
             raise FormularioError("Serviço inválido")
         print(f"[Linha {index}] Serviço preenchido: {valor_servico}")
@@ -1077,15 +1106,24 @@ def preencher_campos_formulario(driver, actions, row, index, df: pd.DataFrame) -
             )
             # Preenche o valor diretamente via JavaScript e aciona eventos
             valor_canal = "não se aplica"
-            driver.execute_script("""
-                arguments[0].value = '';
-                arguments[0].value = arguments[1];
-                arguments[0].dispatchEvent(new Event('input', { bubbles: true }));
-                arguments[0].dispatchEvent(new Event('change', { bubbles: true }));
-            """, select_canal, valor_canal)
-            time.sleep(1)
-            select_canal.send_keys(Keys.ENTER)
-            if not aguardar_campo_valido(driver, select_canal, index):
+            for tentativa in range(3):
+                driver.execute_script(
+                    """
+                    arguments[0].value = '';
+                    arguments[0].value = arguments[1];
+                    arguments[0].dispatchEvent(new Event('input', { bubbles: true }));
+                    arguments[0].dispatchEvent(new Event('change', { bubbles: true }));
+                    """,
+                    select_canal,
+                    valor_canal,
+                )
+                time.sleep(FIELD_DELAY)
+                select_canal.send_keys(Keys.ENTER)
+                if aguardar_campo_valido(driver, select_canal, index):
+                    break
+                if tentativa < 2:
+                    time.sleep(FIELD_DELAY)
+            else:
                 raise FormularioError("Canal de autoatendimento inválido")
             print(f"[Linha {index}] Canal de autoatendimento selecionado: {valor_canal}")
         except Exception as e:
@@ -1099,10 +1137,15 @@ def preencher_campos_formulario(driver, actions, row, index, df: pd.DataFrame) -
             EC.presence_of_element_located((By.XPATH, protocolo_xpath))
         )
         # Este campo não parece ter autocomplete complexo, mantendo send_keys
-        campo_protocolo.clear()
-        campo_protocolo.click()
-        campo_protocolo.send_keys(str(row['Protocolo PLAD']))
-        if not aguardar_campo_valido(driver, campo_protocolo, index):
+        for tentativa in range(3):
+            campo_protocolo.clear()
+            campo_protocolo.click()
+            campo_protocolo.send_keys(str(row['Protocolo PLAD']))
+            if aguardar_campo_valido(driver, campo_protocolo, index):
+                break
+            if tentativa < 2:
+                time.sleep(FIELD_DELAY)
+        else:
             raise FormularioError("Protocolo PLAD inválido")
         print(f"[Linha {index}] Protocolo PLAD preenchido: {row['Protocolo PLAD']}")
 
@@ -1131,22 +1174,30 @@ def preencher_campos_formulario(driver, actions, row, index, df: pd.DataFrame) -
 
         # Limpa o campo e preenche a descrição
         # Este campo não parece ter autocomplete complexo, mantendo send_keys
-        campo_descricao.clear()
-        campo_descricao.click()
-        campo_descricao.send_keys(descricao)
-        if not aguardar_campo_valido(driver, campo_descricao, index):
+        for tentativa in range(3):
+            campo_descricao.clear()
+            campo_descricao.click()
+            campo_descricao.send_keys(descricao)
+            if aguardar_campo_valido(driver, campo_descricao, index):
+                break
+            if tentativa < 2:
+                time.sleep(FIELD_DELAY)
+        else:
             raise FormularioError("Descrição inválida")
         print(f"[Linha {index}] Descrição preenchida: {descricao[:50]}..." if len(descricao) > 50 else f"[Linha {index}] Descrição preenchida: {descricao}")
 
         # Aguarda o botão Registrar ficar habilitado e clica nele
         print(f"[Linha {index}] Aguardando botão Registrar ficar habilitado...")
         registrar_xpath = '//*[@id="actionbar hide"]/div/div[2]/form/div/div[20]/sc-button/button'
-        botao_registrar = WebDriverWait(driver, 30).until(
-            lambda d: d.find_element(By.XPATH, registrar_xpath)
-        )
-        WebDriverWait(driver, 30).until(
-            lambda d: not botao_registrar.get_attribute("disabled")
-        )
+        try:
+            botao_registrar = WebDriverWait(driver, 30).until(
+                lambda d: d.find_element(By.XPATH, registrar_xpath)
+            )
+            WebDriverWait(driver, 30).until(
+                lambda d: not botao_registrar.get_attribute("disabled")
+            )
+        except TimeoutException:
+            raise FormularioError("Botão Registrar desabilitado")
         botao_registrar.click()
         print(f"[Linha {index}] Botão Registrar clicado")
         time.sleep(2)
