@@ -556,9 +556,23 @@ def esperar_spinner_desaparecer(driver, index, timeout=30, check_interval=1):
         
         print(f"[Linha {index}] ⚠️ Timeout ao esperar spinner desaparecer após {timeout} segundos")
         return False
-        
+
     except Exception as e:
         print(f"[Linha {index}] ❌ Erro ao esperar spinner desaparecer: {str(e)}")
+        return False
+
+def aguardar_campo_valido(driver, elemento, index, timeout=10):
+    """Espera o campo possuir a classe 'ng-valid' antes de prosseguir."""
+    try:
+        WebDriverWait(driver, timeout).until(
+            lambda d: "ng-valid" in elemento.get_attribute("class")
+        )
+        print(f"[Linha {index}] Campo validado com 'ng-valid'")
+        return True
+    except TimeoutException:
+        print(
+            f"[Linha {index}] ⚠️ Campo não ficou válido após {timeout} segundos"
+        )
         return False
 
 def clicar_botao_consulta(driver, index):
@@ -980,7 +994,8 @@ def preencher_campos_formulario(driver, actions, row, index, df: pd.DataFrame) -
         """, campo_tipo, valor_tipo)
         time.sleep(1)
         campo_tipo.send_keys(Keys.ENTER)
-        time.sleep(1)
+        if not aguardar_campo_valido(driver, campo_tipo, index):
+            raise FormularioError("Tipo de atendimento inválido")
         print(f"[Linha {index}] Tipo de atendimento preenchido: {valor_tipo}")
 
         # Categoria
@@ -999,7 +1014,8 @@ def preencher_campos_formulario(driver, actions, row, index, df: pd.DataFrame) -
         """, campo_categoria, valor_categoria)
         time.sleep(1)
         campo_categoria.send_keys(Keys.ENTER)
-        time.sleep(1)
+        if not aguardar_campo_valido(driver, campo_categoria, index):
+            raise FormularioError("Categoria inválida")
         print(f"[Linha {index}] Categoria preenchida: {valor_categoria}")
 
         # Subcategoria
@@ -1018,7 +1034,8 @@ def preencher_campos_formulario(driver, actions, row, index, df: pd.DataFrame) -
         """, campo_subcategoria, valor_subcategoria)
         time.sleep(1)
         campo_subcategoria.send_keys(Keys.ENTER)
-        time.sleep(1)
+        if not aguardar_campo_valido(driver, campo_subcategoria, index):
+            raise FormularioError("Subcategoria inválida")
         print(f"[Linha {index}] Subcategoria preenchida: {valor_subcategoria}")
 
         # Serviço
@@ -1037,7 +1054,8 @@ def preencher_campos_formulario(driver, actions, row, index, df: pd.DataFrame) -
         """, campo_servico, valor_servico)
         time.sleep(1)
         campo_servico.send_keys(Keys.ENTER)
-        time.sleep(1)
+        if not aguardar_campo_valido(driver, campo_servico, index):
+            raise FormularioError("Serviço inválido")
         print(f"[Linha {index}] Serviço preenchido: {valor_servico}")
 
         # Canal de autoatendimento
@@ -1057,7 +1075,8 @@ def preencher_campos_formulario(driver, actions, row, index, df: pd.DataFrame) -
             """, select_canal, valor_canal)
             time.sleep(1)
             select_canal.send_keys(Keys.ENTER)
-            time.sleep(1)
+            if not aguardar_campo_valido(driver, select_canal, index):
+                raise FormularioError("Canal de autoatendimento inválido")
             print(f"[Linha {index}] Canal de autoatendimento selecionado: {valor_canal}")
         except Exception as e:
             print(f"[Linha {index}] ⚠️ Campo Canal de autoatendimento não encontrado: {str(e)}")
@@ -1073,7 +1092,8 @@ def preencher_campos_formulario(driver, actions, row, index, df: pd.DataFrame) -
         campo_protocolo.clear()
         campo_protocolo.click()
         campo_protocolo.send_keys(str(row['Protocolo PLAD']))
-        time.sleep(1)
+        if not aguardar_campo_valido(driver, campo_protocolo, index):
+            raise FormularioError("Protocolo PLAD inválido")
         print(f"[Linha {index}] Protocolo PLAD preenchido: {row['Protocolo PLAD']}")
 
         # Descrição
@@ -1104,7 +1124,8 @@ def preencher_campos_formulario(driver, actions, row, index, df: pd.DataFrame) -
         campo_descricao.clear()
         campo_descricao.click()
         campo_descricao.send_keys(descricao)
-        time.sleep(1)
+        if not aguardar_campo_valido(driver, campo_descricao, index):
+            raise FormularioError("Descrição inválida")
         print(f"[Linha {index}] Descrição preenchida: {descricao[:50]}..." if len(descricao) > 50 else f"[Linha {index}] Descrição preenchida: {descricao}")
 
         # Aguarda o botão Registrar ficar habilitado e clica nele
