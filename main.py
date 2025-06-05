@@ -1153,7 +1153,7 @@ def preencher_campos_formulario(driver, actions, row, index, df: pd.DataFrame) -
 
         # Aguarda e clica no botão Confirmar
         print(f"[Linha {index}] Aguardando botão Confirmar...")
-        confirmar_xpath = '//*[@id="modal"]/div/sc-modal-footer/div/div/div[2]/sc-button/button'
+        confirmar_xpath = '//*[@id="modal"]/div/main/div/div[4]/button'
         botao_confirmar = WebDriverWait(driver, 10).until(
             EC.element_to_be_clickable((By.XPATH, confirmar_xpath))
         )
@@ -1169,6 +1169,11 @@ def preencher_campos_formulario(driver, actions, row, index, df: pd.DataFrame) -
         )
         numero_protocolo = elemento_protocolo.text.strip()
         print(f"[Linha {index}] Protocolo capturado: {numero_protocolo}")
+
+        # Salva o protocolo na planilha
+        df.at[index, 'Protocolo PLAD'] = numero_protocolo
+        df.to_excel(EXCEL_PATH, index=False)
+        print(f"[Linha {index}] Protocolo salvo na planilha: {numero_protocolo}")
 
         return numero_protocolo
 
@@ -1406,8 +1411,8 @@ def finalizar_atendimento(driver, index, df: pd.DataFrame):
         actions.move_to_element(botao_finalizar).click().perform()
         
         logger.info(f"[Linha {index}] Aguardando modal de confirmação...")
-        confirmar_xpath = '/html/body/div[3]/div[2]/div/sc-end-service-modal/sc-modal/div/div/main/div/div[4]/button'
-        
+        confirmar_xpath = '//*[@id="modal"]/div/main/div/div[4]/button'
+
         botao_confirmar = WebDriverWait(driver, 10).until(
             EC.element_to_be_clickable((By.XPATH, confirmar_xpath))
         )
