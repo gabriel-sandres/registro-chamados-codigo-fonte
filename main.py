@@ -575,7 +575,7 @@ def esperar_tela_consulta(driver, index, timeout=30):
     )
     try:
         WebDriverWait(driver, timeout).until(
-            EC.presence_of_element_located((By.XPATH, campo_documento_xpath))
+            EC.visibility_of_element_located((By.XPATH, campo_documento_xpath))
         )
         logger.info(f"[Linha {index}] Tela de consulta exibida")
         return True
@@ -598,6 +598,25 @@ def aguardar_campo_valido(driver, elemento, index, timeout=10):
             f"[Linha {index}] ⚠️ Campo não ficou válido após {timeout} segundos"
         )
         return False
+
+def clicar_com_fallback(driver, elemento, index):
+    """Tenta clicar no elemento de formas diferentes."""
+    try:
+        elemento.click()
+        return True
+    except Exception as e:
+        logger.warning(f"[Linha {index}] Falha ao clicar normalmente: {e}. Tentando via JavaScript")
+        try:
+            driver.execute_script("arguments[0].click();", elemento)
+            return True
+        except Exception as e2:
+            logger.error(f"[Linha {index}] Falha ao clicar via JavaScript: {e2}")
+            try:
+                ActionChains(driver).move_to_element(elemento).click().perform()
+                return True
+            except Exception as e3:
+                logger.error(f"[Linha {index}] Falha ao clicar via ActionChains: {e3}")
+                return False
 
 def clicar_botao_consulta(driver, index):
     try:
@@ -1227,7 +1246,7 @@ def preencher_campos_formulario(driver, actions, row, index, df: pd.DataFrame) -
             )
         except TimeoutException:
             raise FormularioError("Botão Registrar desabilitado")
-        botao_registrar.click()
+        clicar_com_fallback(driver, botao_registrar, index)
         print(f"[Linha {index}] Botão Registrar clicado")
         time.sleep(2)
 
@@ -1237,9 +1256,10 @@ def preencher_campos_formulario(driver, actions, row, index, df: pd.DataFrame) -
         botao_confirmar = WebDriverWait(driver, 10).until(
             EC.element_to_be_clickable((By.XPATH, confirmar_xpath))
         )
-        botao_confirmar.click()
+        clicar_com_fallback(driver, botao_confirmar, index)
         print(f"[Linha {index}] Botão Confirmar clicado")
-        time.sleep(2)
+        esperar_modal_desaparecer(driver, index)
+        time.sleep(1)
 
         # Captura o número do protocolo
         print(f"[Linha {index}] Capturando número do protocolo...")
@@ -1487,8 +1507,7 @@ def finalizar_atendimento(driver, index, df: pd.DataFrame):
         botao_finalizar = WebDriverWait(driver, 10).until(
             EC.element_to_be_clickable((By.XPATH, finalizar_xpath))
         )
-        actions = ActionChains(driver)
-        actions.move_to_element(botao_finalizar).click().perform()
+        clicar_com_fallback(driver, botao_finalizar, index)
         
         logger.info(f"[Linha {index}] Aguardando modal de confirmação...")
         confirmar_xpath = '//*[@id="modal"]/div/main/div/div[4]/button'
@@ -1496,7 +1515,9 @@ def finalizar_atendimento(driver, index, df: pd.DataFrame):
         botao_confirmar = WebDriverWait(driver, 10).until(
             EC.element_to_be_clickable((By.XPATH, confirmar_xpath))
         )
-        actions.move_to_element(botao_confirmar).click().perform()
+        clicar_com_fallback(driver, botao_confirmar, index)
+        logger.info(f"[Linha {index}] Botão Confirmar clicado")
+        esperar_modal_desaparecer(driver, index)
 
         logger.info(f"[Linha {index}] Aguardando retorno à tela inicial...")
         esperar_spinner_desaparecer(driver, index)
