@@ -1067,6 +1067,9 @@ def preencher_campos_formulario(driver, actions, row, index, df: pd.DataFrame) -
             raise FormularioError("Subcategoria inválida")
         print(f"[Linha {index}] Subcategoria preenchida: {valor_subcategoria}")
 
+        # Aguarda a tela carregar antes de preencher o campo Serviço
+        time.sleep(10)
+
         # Serviço
         print(f"[Linha {index}] Preenchendo Serviço...")
         servico_xpath = '//*[@id="serviceId"]'
@@ -1133,8 +1136,8 @@ def preencher_campos_formulario(driver, actions, row, index, df: pd.DataFrame) -
         # Protocolo PLAD
         print(f"[Linha {index}] Preenchendo Protocolo PLAD...")
         protocolo_xpath = '//*[@id="Protocolo Plad"]'
-        campo_protocolo = WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.XPATH, protocolo_xpath))
+        campo_protocolo = WebDriverWait(driver, 30).until(
+            EC.element_to_be_clickable((By.XPATH, protocolo_xpath))
         )
         # Este campo não parece ter autocomplete complexo, mantendo send_keys
         for tentativa in range(3):
