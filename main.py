@@ -587,17 +587,31 @@ def esperar_tela_consulta(driver, index, timeout=30):
 
 def aguardar_campo_valido(driver, elemento, index, timeout=10):
     """Espera o campo possuir a classe 'ng-valid' antes de prosseguir."""
-    end_time = time.time() + timeout
-    while time.time() < end_time:
-        try:
-            if "ng-valid" in elemento.get_attribute("class"):
-                print(f"[Linha {index}] Campo validado com 'ng-valid'")
-                return True
-        except StaleElementReferenceException:
-            pass
-        time.sleep(0.5)
-    print(f"[Linha {index}] ⚠️ Campo não ficou válido após {timeout} segundos")
-    return False
+    try:
+        WebDriverWait(driver, timeout).until(
+            lambda d: "ng-valid" in elemento.get_attribute("class")
+        )
+        print(f"[Linha {index}] Campo validado com 'ng-valid'")
+        return True
+    except TimeoutException:
+        print(
+            f"[Linha {index}] ⚠️ Campo não ficou válido após {timeout} segundos"
+        )
+        return False
+
+def aguardar_campo_valido_por_id(driver, element_id, index, timeout=10):
+    """Espera o campo identificado pelo ID possuir a classe 'ng-valid'."""
+    try:
+        WebDriverWait(driver, timeout).until(
+            lambda d: "ng-valid" in d.find_element(By.ID, element_id).get_attribute("class")
+        )
+        print(f"[Linha {index}] Campo '{element_id}' validado com 'ng-valid'")
+        return True
+    except TimeoutException:
+        print(
+            f"[Linha {index}] ⚠️ Campo '{element_id}' não ficou válido após {timeout} segundos"
+        )
+        return False
 
 def clicar_com_fallback(driver, elemento, index):
     """Tenta clicar no elemento de formas diferentes."""
@@ -1213,7 +1227,7 @@ def preencher_campos_formulario(driver, actions, row, index, df: pd.DataFrame) -
         else:
             descricao = observacao
 
-        # Limpa o campo e preenche a descrição
+        # Limpa o campo e preenche a descrição validando o status da classe
         for tentativa in range(3):
             campo_descricao = WebDriverWait(driver, 10).until(
                 EC.presence_of_element_located((By.XPATH, descricao_xpath))
@@ -1222,12 +1236,12 @@ def preencher_campos_formulario(driver, actions, row, index, df: pd.DataFrame) -
                 campo_descricao.clear()
                 campo_descricao.click()
                 campo_descricao.send_keys(descricao)
+                if aguardar_campo_valido_por_id(driver, "description", index):
+                    break
             except StaleElementReferenceException:
                 if tentativa < 2:
                     time.sleep(FIELD_DELAY)
                 continue
-            if aguardar_campo_valido(driver, campo_descricao, index):
-                break
             if tentativa < 2:
                 time.sleep(FIELD_DELAY)
         else:
@@ -1569,7 +1583,7 @@ def main():
                 try:
                     logger.info(f"\n{'='*50}")
                     logger.info(f"[Linha {index}] 📝 Iniciando processamento do registro {index + 1}/{total_registros}")
-                    
+
                     if tentar_preencher_formulario(driver, actions, row, index, df):
                         if finalizar_atendimento(driver, index, df):
                             registros_processados += 1
@@ -1577,14 +1591,19 @@ def main():
                         else:
                             registros_com_erro += 1
                             logger.error(f"[Linha {index}] ❌ Erro ao finalizar atendimento")
+                            logger.error("Encerrando aplicação devido a falha no registro")
+                            break
                     else:
                         registros_com_erro += 1
                         logger.error(f"[Linha {index}] ❌ Erro ao preencher formulário")
-                    
+                        logger.error("Encerrando aplicação devido a falha no registro")
+                        break
+
                 except Exception as e:
                     registros_com_erro += 1
                     log_error(e, "processamento do registro", index, df)
-                    continue
+                    logger.error("Encerrando aplicação devido a falha no registro")
+                    break
             
             logger.info("\n" + "="*50)
             logger.info("📊 RELATÓRIO FINAL:")
