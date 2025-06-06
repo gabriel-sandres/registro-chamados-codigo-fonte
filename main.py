@@ -17,7 +17,12 @@ import time
 import logging
 import traceback
 from typing import Optional, Tuple
-from selenium.common.exceptions import TimeoutException, NoSuchElementException, ElementClickInterceptedException
+from selenium.common.exceptions import (
+    TimeoutException,
+    NoSuchElementException,
+    ElementClickInterceptedException,
+    StaleElementReferenceException,
+)
 
 # Tempo de espera padrão entre ações de preenchimento de campos
 FIELD_DELAY = 2
@@ -561,6 +566,23 @@ def esperar_spinner_desaparecer(driver, index, timeout=30, check_interval=1):
 
     except Exception as e:
         print(f"[Linha {index}] ❌ Erro ao esperar spinner desaparecer: {str(e)}")
+        return False
+
+def esperar_tela_consulta(driver, index, timeout=30):
+    """Aguarda a tela de consulta de documento aparecer."""
+    campo_documento_xpath = (
+        "//*[@id='app']/section/sc-content/sc-consult/div/div[2]/div/sc-card-content/div/main/form/div/div[2]/sc-form-field/div/input"
+    )
+    try:
+        WebDriverWait(driver, timeout).until(
+            EC.presence_of_element_located((By.XPATH, campo_documento_xpath))
+        )
+        logger.info(f"[Linha {index}] Tela de consulta exibida")
+        return True
+    except TimeoutException:
+        logger.warning(
+            f"[Linha {index}] Tela de consulta não apareceu após {timeout} segundos"
+        )
         return False
 
 def aguardar_campo_valido(driver, elemento, index, timeout=10):
@@ -1155,9 +1177,6 @@ def preencher_campos_formulario(driver, actions, row, index, df: pd.DataFrame) -
         # Descrição
         print(f"[Linha {index}] Preenchendo Descrição...")
         descricao_xpath = '//*[@id="description"]'
-        campo_descricao = WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.XPATH, descricao_xpath))
-        )
 
         # Mensagem padrão para descrição
         MENSAGEM_PADRAO = "Chamado registrado via automação"
@@ -1176,11 +1195,18 @@ def preencher_campos_formulario(driver, actions, row, index, df: pd.DataFrame) -
             descricao = observacao
 
         # Limpa o campo e preenche a descrição
-        # Este campo não parece ter autocomplete complexo, mantendo send_keys
         for tentativa in range(3):
-            campo_descricao.clear()
-            campo_descricao.click()
-            campo_descricao.send_keys(descricao)
+            campo_descricao = WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located((By.XPATH, descricao_xpath))
+            )
+            try:
+                campo_descricao.clear()
+                campo_descricao.click()
+                campo_descricao.send_keys(descricao)
+            except StaleElementReferenceException:
+                if tentativa < 2:
+                    time.sleep(FIELD_DELAY)
+                continue
             if aguardar_campo_valido(driver, campo_descricao, index):
                 break
             if tentativa < 2:
@@ -1471,9 +1497,11 @@ def finalizar_atendimento(driver, index, df: pd.DataFrame):
             EC.element_to_be_clickable((By.XPATH, confirmar_xpath))
         )
         actions.move_to_element(botao_confirmar).click().perform()
-        
+
         logger.info(f"[Linha {index}] Aguardando retorno à tela inicial...")
-        WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.TAG_NAME, "body")))
+        esperar_spinner_desaparecer(driver, index)
+        if not esperar_tela_consulta(driver, index):
+            raise FinalizacaoError("Tela de consulta não carregou")
         logger.info(f"[Linha {index}] ✅ Atendimento finalizado com sucesso!")
         return True
         
