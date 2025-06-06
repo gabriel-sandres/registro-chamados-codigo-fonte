@@ -587,17 +587,17 @@ def esperar_tela_consulta(driver, index, timeout=30):
 
 def aguardar_campo_valido(driver, elemento, index, timeout=10):
     """Espera o campo possuir a classe 'ng-valid' antes de prosseguir."""
-    try:
-        WebDriverWait(driver, timeout).until(
-            lambda d: "ng-valid" in elemento.get_attribute("class")
-        )
-        print(f"[Linha {index}] Campo validado com 'ng-valid'")
-        return True
-    except TimeoutException:
-        print(
-            f"[Linha {index}] ⚠️ Campo não ficou válido após {timeout} segundos"
-        )
-        return False
+    end_time = time.time() + timeout
+    while time.time() < end_time:
+        try:
+            if "ng-valid" in elemento.get_attribute("class"):
+                print(f"[Linha {index}] Campo validado com 'ng-valid'")
+                return True
+        except StaleElementReferenceException:
+            pass
+        time.sleep(0.5)
+    print(f"[Linha {index}] ⚠️ Campo não ficou válido após {timeout} segundos")
+    return False
 
 def clicar_com_fallback(driver, elemento, index):
     """Tenta clicar no elemento de formas diferentes."""
