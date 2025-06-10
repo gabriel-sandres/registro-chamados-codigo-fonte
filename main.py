@@ -11,6 +11,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.keys import Keys
 from dotenv import load_dotenv
 from datetime import datetime
+from webdriver_manager.chrome import ChromeDriverManager  # Certifique-se de importar
 import pandas as pd
 import os
 import time
@@ -117,10 +118,11 @@ def log_error(error: Exception, context: str, index: Optional[int] = None, df: O
 def setup_driver(download_dir: str) -> webdriver.Chrome:
     options = Options()
     options.add_experimental_option('prefs', {'download.default_directory': download_dir})
-    service = ChromeService(CHROMEDRIVER_PATH)
+    service = ChromeService(ChromeDriverManager().install())
     driver = webdriver.Chrome(service=service, options=options)
     driver.maximize_window()
     return driver
+
 
 def load_credentials():
     if not os.path.exists(dotenv_path):
