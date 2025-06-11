@@ -523,11 +523,13 @@ def verificar_pessoa_nao_encontrada(driver, index):
         return False
 
 def formatar_documento(documento):
+    """Formata CPF ou CNPJ preenchendo zeros à esquerda quando necessário."""
     numeros = ''.join(filter(str.isdigit, str(documento)))
-    if len(numeros) == 11:
+
+    if 0 < len(numeros) <= 11:
         numeros = numeros.zfill(11)
         return f"{numeros[:3]}.{numeros[3:6]}.{numeros[6:9]}-{numeros[9:]}"
-    elif len(numeros) == 14:
+    elif len(numeros) <= 14:
         numeros = numeros.zfill(14)
         return f"{numeros[:2]}.{numeros[2:5]}.{numeros[5:8]}/{numeros[8:12]}-{numeros[12:]}"
     else:
